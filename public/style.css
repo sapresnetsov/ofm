@@ -1,0 +1,42 @@
+.wordwrap {
+    white-space: pre-wrap; /* CSS3 */
+    white-space: -moz-pre-wrap; /* Firefox */
+    white-space: -o-pre-wrap; /* Opera 7 */
+    word-wrap: break-word; /* IE */
+}
+
+.text {
+    font-family: Calibri;
+}
+.text_text {
+    color: black;
+}
+.text_indicator {
+    color: blue;
+}
+.title {
+
+}
+h3.first_level {
+    font-size: 15pt;
+}
+p.first_level {
+    font-size: 12pt;
+}
+
+
+div{
+    position: absolute;
+    margin: 0;
+    padding: 0;
+}
+div.outer_block {
+    display: block;
+}
+div.inner_block {
+    display: block;
+    width: 100%;
+    border: 4px double black;
+    background-color: lightgrey;
+    text-align: center;
+}
