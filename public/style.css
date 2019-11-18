@@ -14,16 +14,17 @@
 .text_indicator {
     color: blue;
 }
-.title {
-
+.title_text {
+    margin-top: 0;
 }
 h3.first_level {
     font-size: 15pt;
 }
-p.first_level {
+
+p.function_text {
+    margin: 0;
     font-size: 12pt;
 }
-
 
 div{
     position: absolute;
@@ -36,7 +37,14 @@ div.outer_block {
 div.inner_block {
     display: block;
     width: 100%;
+    margin: 0;
     border: 4px double black;
-    background-color: lightgrey;
+    text-align: center;
+}
+
+div.indicator {
+    border: 1px solid black;
+    border-top: 0px;
+    font-size: 8px;
     text-align: center;
 }
