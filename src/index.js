@@ -1,9 +1,19 @@
 import './../public/style.css';
 import {struct} from './data';
-import {H_SPACE_BETWEEN_BLOCKS, LEVEL_WIDTH_STEP, PARENT_WIDTH, V_SPACE_BETWEEN_BLOCKS} from './constants';
+import {
+  BORDER_WIDTH, H_BLOCK_PADDING,
+  H_SPACE_BETWEEN_BLOCKS,
+  LEVEL_WIDTH_STEP,
+  PARENT_WIDTH,
+  V_SPACE_BETWEEN_BLOCKS,
+} from './constants';
 import {MIN_BLOCK_HEIGHT} from './constants';
 import {IND_HEIGHT} from './constants';
-import {createLeadershipBlock, createManufacturingBlock, getBlockParams} from './utils';
+import {
+  createBlock,
+  createLeadershipBlock,
+  getBlockParams,
+} from './utils';
 
 const blocksMap = new Map();
 const linesMap = new Map();
@@ -18,13 +28,13 @@ const init = () => {
 
   // оценка требуемой ширины для вывода ряда иерархии
   // const block_width = getBlockWidth(parent);
-
+  // TODO корневой блок, скорее всего, придется перемещать после отрисовки всех блоков
   const x = screenWidth / 2 - PARENT_WIDTH / 2;
   const y = 20;
-  let parentBlock = createLeadershipBlock(x, y, PARENT_WIDTH, MIN_BLOCK_HEIGHT, parent.title, parent.functions, parent.indicators);
+  const parentBlock = createLeadershipBlock(x, y, PARENT_WIDTH, MIN_BLOCK_HEIGHT, parent.title, parent.functions, parent.indicators);
   root.appendChild(parentBlock);
 
-  let newHeight = parentBlock.children[0].clientHeight + 7;
+  let newHeight = parentBlock.children[0].clientHeight;
 
   if (parentBlock.clientHeight > newHeight) {
     parentBlock.children[0].style.height = MIN_BLOCK_HEIGHT + 'px';
@@ -33,66 +43,74 @@ const init = () => {
     parentBlock.style.height = newHeight + 'px';
     parentBlock.children[1].style.top = newHeight + 'px';
   }
+  const indicatorBlockTop = newHeight + BORDER_WIDTH.leadership * 2;
+  parentBlock.children[1].style.top = indicatorBlockTop + 'px';
   blocksMap.set(parent.id, getBlockParams(parentBlock));
 
-  parentBlock = blocksMap.get(parent.id);
-
-  drawFirstLayer(root, blocksMap, parent, parentBlock.x, parentBlock.y, parentBlock.height);
+  const parentBlockParams = blocksMap.get(parent.id);
+  drawFirstLayer(root, blocksMap, parent, parentBlockParams);
 
   parent.children.forEach((child) => {
     drawColumn(blocksMap, child, blocksMap.get(child.id));
   });
 };
 
+/**
+ * Отрисовка вертикально-расположенных блоков
+ * @param {Object} blocksMap
+ * @param {Object} parent
+ * @param {Object} parentParams
+ * @return {number} verticalShift
+ */
 const drawColumn = (blocksMap, parent, parentParams,) => {
   const childrenBlocksMap = new Map();
-
-  let maxHeight = MIN_BLOCK_HEIGHT;
-  let newHeight = MIN_BLOCK_HEIGHT;
   const width = parentParams.width - LEVEL_WIDTH_STEP;
   const height = MIN_BLOCK_HEIGHT;
 
-  const x = parentParams.x + LEVEL_WIDTH_STEP;
-  let y = parentParams.bottom_p.y + V_SPACE_BETWEEN_BLOCKS;
+  const x = parentParams.x + LEVEL_WIDTH_STEP + parentParams.borderWidth * 2;
+  let y = parentParams.bottom_p.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+  let retVerticalShift = 0;
 
+  let i = 0;
   parent.children.forEach((child) => {
-    const childBlock = createManufacturingBlock(x, y, width, height, child.title, child.functions, child.indicators, child.level);
-    childrenBlocksMap.set(child.id, childBlock);
+    i += 1;
+    const blockType = child.type || 'default';
+    const tempX = x - BORDER_WIDTH[blockType] * 2;
+    const initialBlockParams = [tempX, y, width, height, blockType, child.title, child.functions, child.indicators];
+    const childBlock = createBlock(...initialBlockParams);
+    // childrenBlocksMap.set(child.id, childBlock);
     root.appendChild(childBlock);
 
-    const childHeight = childBlock.children[0].clientHeight + 8;
+    const childHeight = childBlock.children[0].clientHeight;
+    const indicatorBlockTop = childHeight + BORDER_WIDTH[blockType] * 2;
 
-    if (childHeight > maxHeight) {
-      maxHeight = childHeight;
-      newHeight = childHeight;
-    } else {
-      childBlock.children[0].style.height = MIN_BLOCK_HEIGHT + 'px';
+    // подбор высоты
+    // childBlock.style.height = childHeight + 'px';
+    childBlock.children[0].style.height = childHeight + 'px';
+    childBlock.children[1].style.top = indicatorBlockTop + 'px';
+
+    blocksMap.set(child.id, getBlockParams(childBlock));
+    retVerticalShift += childHeight + BORDER_WIDTH[blockType] * 2 + IND_HEIGHT;
+    if (!parent.children[i]) {
+      retVerticalShift += V_SPACE_BETWEEN_BLOCKS;
     }
+    // отрисовка потомков
+    const verticalShift = drawColumn(blocksMap, child, blocksMap.get(child.id));
 
-    // смещение индикаторов
-    childBlock.children[1].style.top = childHeight + 'px';
-
-    y += newHeight + IND_HEIGHT + H_SPACE_BETWEEN_BLOCKS;
+    y = blocksMap.get(child.id).bottom_p.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT + verticalShift;
   });
 
-  const indicatorBlockTop = newHeight + 8;
-  if (maxHeight > height) {
-    maxHeight += IND_HEIGHT;
-  } else {
-    maxHeight = height;
-  }
-
-  // пересчет высоты блоков и добавление в глобальный map
-  // parent.children.forEach((child) => {
-  //   const childBlock = childrenBlocksMap.get(child.id);
-  //   childBlock.style.height = maxHeight + 'px';
-  //   childBlock.children[0].style.height = newHeight + 'px';
-  //   childBlock.children[1].style.top = indicatorBlockTop + 'px';
-  //   blocksMap.set(child.id, getBlockParams(childBlock));
-  // });
+  return retVerticalShift;
 };
 
-const drawFirstLayer = (root, blocksMap, parent, parX, parY, parentHeight) => {
+/**
+ * Отрисовка блоков с единицами управления
+ * @param {Object} root
+ * @param {Map} blocksMap
+ * @param {Object} parent
+ * @param {Object} parentParams
+ */
+const drawFirstLayer = (root, blocksMap, parent, parentParams) => {
   const childrenBlocksMap = new Map();
 
   let maxHeight = MIN_BLOCK_HEIGHT;
@@ -102,30 +120,30 @@ const drawFirstLayer = (root, blocksMap, parent, parX, parY, parentHeight) => {
   const count = parent.children.length;
 
   const globalWidth = width * count + H_SPACE_BETWEEN_BLOCKS * ( count - 1 );
-  let x = parX - globalWidth / 2;
+  let x = parentParams.x - globalWidth / 2;
   if (x < 0) {
     x = H_SPACE_BETWEEN_BLOCKS;
   }
-  const y = parY + parentHeight + V_SPACE_BETWEEN_BLOCKS;
+  const y = parentParams.bottom_p.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
 
   parent.children.forEach((child) => {
-    const childBlock = createLeadershipBlock(x, y, width, height, child.title, child.functions, child.indicators, child.level);
+    const blockType = child.type || 'default';
+    const initialBlockParams = [x, y, width, height, blockType, child.title, child.functions, child.indicators];
+    const childBlock = createBlock(...initialBlockParams);
     childrenBlocksMap.set(child.id, childBlock);
     root.appendChild(childBlock);
 
-    const childHeight = childBlock.children[0].clientHeight + 8;
+    const childHeight = childBlock.children[0].clientHeight;
 
     if (childHeight > maxHeight) {
       maxHeight = childHeight;
       newHeight = childHeight;
-    } else {
-      childBlock.children[0].style.height = MIN_BLOCK_HEIGHT + 'px';
     }
 
-    x += width + H_SPACE_BETWEEN_BLOCKS;
+    x += width + H_BLOCK_PADDING + BORDER_WIDTH[blockType] * 2 + H_SPACE_BETWEEN_BLOCKS;
   });
 
-  const indicatorBlockTop = newHeight + 8;
+  const indicatorBlockTop = newHeight + BORDER_WIDTH.deputy * 2;
   if (maxHeight > height) {
     maxHeight += IND_HEIGHT;
   } else {

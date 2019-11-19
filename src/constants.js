@@ -3,28 +3,51 @@ export const TITLE_FONT_SIZE = '14pt';
 export const FUNC_FONT_SIZE = '12pt';
 export const TITLE_SPACE_AFTER = '5pt';
 
-export const FIRST_LEVEL_BORDER = '1.5pt';
-export const SECOND_LEVEL_BORDER = '1.25pt';
-export const INDEPENDENT_LEVEL_BORDER = '1pt';
-export const SUBDIVISION_LEVEL_BORDER = '1pt';
-export const INDICATOR_BORDER = '0.75pt';
+export const BLOCK_TYPES = {
+  leadership: 'leadership',
+  deputy: 'deputy',
+  manufacturing: 'manufacturing',
+  technical: 'technical',
+  economy: 'economy',
+  management: 'management',
+  default: 'default',
+  ind: 'indicator',
+};
 
-export const LEADERSHIP_COLOR = 'gray';
-export const MANUFACTURING_COLOR = 'green';
-export const TECHNICAL_POLICY_COLOR = 'blue';
-export const ECONOMY_COLOR = 'yeallow';
-export const MANAGEMENT_COLOR = 'purple';
+// pt -> px
+export const BORDER_WIDTH = {
+  leadership: 4,
+  deputy: 3,
+  manufacturing: 1,
+  technical: 1,
+  economy: 1,
+  management: 1,
+  default: 1,
+  ind: 1,
+};
 
-export const INDICATOR_BLOCK_HEIGHT = 30;
+export const BACKGROUND_COLOR = {
+  leadership: '#d9d9d9',
+  deputy: '#d9d9d9',
+  manufacturing: '#d8e3bf',
+  technical: '#daeef3',
+  economy: '#f9fcd1',
+  management: '#dfd9e8',
+  default: 'white',
+  ind: '#ffffca',
+};
 
 export const MIN_BLOCK_WIDTH = 150;
 export const MAX_BLOCK_WIDTH = 300;
 export const MIN_BLOCK_HEIGHT = 100;
 export const MAX_BLOCK_HEIGHT = 100;
-export const PARENT_WIDTH = 200;
+export const PARENT_WIDTH = 260;
 export const STD_BLOCK_HEIGHT = 100;
-export const IND_HEIGHT = 12;
+export const IND_HEIGHT = 15;
 export const IND_WIDTH = 40;
-export const H_SPACE_BETWEEN_BLOCKS = 20;
+// при задании величины необходимо учитывать padding внутри блоков
+export const H_BLOCK_PADDING = 5;
+export const H_SPACE_BETWEEN_BLOCKS = 20 + H_BLOCK_PADDING * 2;
 export const V_SPACE_BETWEEN_BLOCKS = 30;
 export const LEVEL_WIDTH_STEP = 20;
+

@@ -5,6 +5,7 @@ export const struct = [{
   'indicators': ['Nпп`', 'Nпп'],
   'level': 'first_level',
   'otype': 'S',
+  'type': 'leadership',
   'children': [
     {
       'id': '21',
@@ -17,13 +18,14 @@ export const struct = [{
       'indicators': ['Nпп`', 'Nпп'],
       'level': 'second_level',
       'otype': 'S',
+      'type': 'deputy',
       'children': [
         {
           'id': '31',
           'title': 'Ведущий инженер по охране труда',
           'functions': [
-            '20. Ключевая функция',
-            '21. Ключевая функция',
+            '20. Является ответственным за формирование анализа функционирования основных производственных процессов, связанных с безопасностью движения',
+            '21. Является ответственным за формирование анализа функционирования основных производственных процессов, связанных с безопасностью движения',
             '22. Ключевая функция',
             '23. Супер-ключевая ключевая функция',
             '24. Ключевая функция',
@@ -32,6 +34,7 @@ export const struct = [{
           'indicators': ['Nпп`', 'Nпп'],
           'level': 'second_level',
           'otype': 'S',
+          'type': 'management',
           'children': [
             {
               'id': '41',
@@ -62,6 +65,7 @@ export const struct = [{
           'indicators': ['Nпп`', 'Nпп'],
           'level': 'second_level',
           'otype': 'S',
+          'type': 'economy',
           'children': [
             {
               'id': '42',
@@ -77,6 +81,7 @@ export const struct = [{
               'indicators': ['Nпп`', 'Nпп'],
               'level': 'second_level',
               'otype': 'S',
+              'type': 'economy',
               'children': [],
             },
             {
@@ -93,6 +98,7 @@ export const struct = [{
               'indicators': ['Nпп`', 'Nпп'],
               'level': 'second_level',
               'otype': 'S',
+              'type': 'economy',
               'children': [],
             },
           ],
@@ -108,6 +114,7 @@ export const struct = [{
           'indicators': ['Nпп`', 'Nпп'],
           'level': 'second_level',
           'otype': 'S',
+          'type': 'economy',
           'children': [],
         },
         {
@@ -168,6 +175,7 @@ export const struct = [{
       'indicators': ['Nпп`', 'Nпп'],
       'level': 'second_level',
       'otype': 'S',
+      'type': 'deputy',
       'children': [
         {
           'id': '36',
@@ -191,6 +199,7 @@ export const struct = [{
       'indicators': ['Nпп`', 'Nпп'],
       'level': 'second_level',
       'otype': 'S',
+      'type': 'deputy',
       'children': [
         {
           'id': '37',
@@ -214,6 +223,7 @@ export const struct = [{
       'indicators': ['Nпп`', 'Nпп'],
       'level': 'second_level',
       'otype': 'S',
+      'type': 'deputy',
       'children': [
         {
           'id': '38',
@@ -250,6 +260,7 @@ export const struct = [{
       'indicators': ['Nпп`', 'Nпп'],
       'level': 'second_level',
       'otype': 'S',
+      'type': 'deputy',
       'children': [
         {
           'id': '310',
@@ -290,6 +301,7 @@ export const struct = [{
       'indicators': ['Nпп`', 'Nпп'],
       'level': 'second_level',
       'otype': 'S',
+      'type': 'deputy',
       'children': [
         {
           'id': '312',
@@ -419,6 +431,7 @@ export const struct = [{
       'indicators': ['Nпп`', 'Nпп'],
       'level': 'second_level',
       'otype': 'O',
+      'type': 'technical',
       'children': [],
     },
     {
@@ -428,6 +441,7 @@ export const struct = [{
       'indicators': ['Nпп`', 'Nпп'],
       'level': 'second_level',
       'otype': 'O',
+      'type': 'technical',
       'children': [],
     },
   ],

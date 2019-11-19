@@ -1,31 +1,30 @@
-.wordwrap {
-    white-space: pre-wrap; /* CSS3 */
-    white-space: -moz-pre-wrap; /* Firefox */
-    white-space: -o-pre-wrap; /* Opera 7 */
-    word-wrap: break-word; /* IE */
-}
-
-.text {
+body {
+    background-color: white;
     font-family: Calibri;
 }
-.text_text {
-    color: black;
+.a4_body_book {
+    width: 21cm;
+    height: 29.7cm;
+    margin: 30mm 45mm 30mm 45mm;
 }
-.text_indicator {
-    color: blue;
-}
-.title_text {
-    margin-top: 0;
+.a4_body_album {
+    width: 29.7cm;
+    height: 21cm;
+    margin: 30mm 45mm 30mm 45mm;
 }
 h3.first_level {
     font-size: 15pt;
 }
 
+.title_text {
+    margin-top: 5px;
+    margin-bottom: 5pt;
+}
 p.function_text {
     margin: 0;
+    padding-bottom: 2pt;
     font-size: 12pt;
 }
-
 div{
     position: absolute;
     margin: 0;
@@ -37,14 +36,59 @@ div.outer_block {
 div.inner_block {
     display: block;
     width: 100%;
+
     margin: 0;
-    border: 4px double black;
+    border-color: black;
     text-align: center;
 }
 
+div.leadership {
+    border-style: double;
+    border-color: black;
+}
+
+div.deputy {
+    border-style: double;
+    border-color: black;
+}
+
+div.manufacturing {
+    border-style: solid;
+    border-color: black;
+}
+
+div.management {
+    border-style: solid;
+    border-color: black;
+}
+
+div.economy {
+    border-style: solid;
+    border-color: black;
+}
+
+div.technical {
+    border-style: solid;
+    border-color: black;
+}
+
+div.default {
+    border-style: solid;
+    border-color: black;
+}
+
 div.indicator {
-    border: 1px solid black;
-    border-top: 0px;
-    font-size: 8px;
+    border-style: solid;
+    border-color: black;
+    border-top: 0;
+    background-color: lightyellow;
+    font-size: 10pt;
     text-align: center;
+}
+
+.text_color_text {
+    color: black;
+}
+.text_color_indicator {
+    color: blue;
 }
