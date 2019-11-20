@@ -130,7 +130,6 @@ export const getPoint = (pX, pY) => {
  */
 export const getBlockParams = (block) => {
   const left = parseInt(block.style.left, 10);
-  const right = parseInt(block.style.right, 10);
   const top = parseInt(block.style.top, 10);
   const width = parseInt(block.style.width, 10);
   const height = parseInt(block.children[0].style.height, 10);
@@ -143,8 +142,8 @@ export const getBlockParams = (block) => {
     height: height,
     borderWidth: borderWidth,
     top_p: getPoint(left + width / 2, top),
-    bottom_p: getPoint(left + width / 2, top + height - IND_HEIGHT + borderWidth * 2),
+    bottom_p: getPoint(left + width / 2, top + height + borderWidth * 2),
     left_p: getPoint(left, top + height / 2),
-    right_p: getPoint(right, top + height / 2),
+    right_p: getPoint(left + width + borderWidth * 2, top + height / 2),
   };
 };

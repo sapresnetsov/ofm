@@ -48,6 +48,6 @@ export const IND_WIDTH = 40;
 // при задании величины необходимо учитывать padding внутри блоков
 export const H_BLOCK_PADDING = 5;
 export const H_SPACE_BETWEEN_BLOCKS = 20 + H_BLOCK_PADDING * 2;
-export const V_SPACE_BETWEEN_BLOCKS = 30;
+export const V_SPACE_BETWEEN_BLOCKS = 20;
 export const LEVEL_WIDTH_STEP = 20;
 

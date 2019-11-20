@@ -20,7 +20,7 @@ const linesMap = new Map();
 const layersMap = new Map();
 
 // Инициализация отрисовки схемы
-const init = () => {
+export const init = () => {
   const root = document.getElementById('root');
   const screenWidth = screen.width;
 
@@ -71,7 +71,7 @@ const drawColumn = (blocksMap, parent, parentParams,) => {
   let y = parentParams.bottom_p.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
   let retVerticalShift = 0;
 
-  let i = 0;
+  let i;
   parent.children.forEach((child) => {
     i += 1;
     const blockType = child.type || 'default';
@@ -97,7 +97,7 @@ const drawColumn = (blocksMap, parent, parentParams,) => {
     // отрисовка потомков
     const verticalShift = drawColumn(blocksMap, child, blocksMap.get(child.id));
 
-    y = blocksMap.get(child.id).bottom_p.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT + verticalShift;
+    y = blocksMap.get(child.id).bottom_p.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS + verticalShift;
   });
 
   return retVerticalShift;
@@ -143,7 +143,6 @@ const drawFirstLayer = (root, blocksMap, parent, parentParams) => {
     x += width + H_BLOCK_PADDING + BORDER_WIDTH[blockType] * 2 + H_SPACE_BETWEEN_BLOCKS;
   });
 
-  const indicatorBlockTop = newHeight + BORDER_WIDTH.deputy * 2;
   if (maxHeight > height) {
     maxHeight += IND_HEIGHT;
   } else {
@@ -153,6 +152,7 @@ const drawFirstLayer = (root, blocksMap, parent, parentParams) => {
   // пересчет высоты блоков и добавление в глобальный map
   parent.children.forEach((child) => {
     const childBlock = childrenBlocksMap.get(child.id);
+    const indicatorBlockTop = newHeight + parseInt(childBlock.children[0].style.borderWidth, 10) * 2;
     childBlock.style.height = maxHeight + 'px';
     childBlock.children[0].style.height = newHeight + 'px';
     childBlock.children[1].style.top = indicatorBlockTop + 'px';
