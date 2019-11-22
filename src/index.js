@@ -1,5 +1,4 @@
 import './../public/style.css';
-import {struct} from './data';
 import {
   BORDER_WIDTH, H_BLOCK_PADDING,
   H_SPACE_BETWEEN_BLOCKS,
@@ -14,6 +13,7 @@ import {
   createLeadershipBlock,
   getBlockParams,
 } from './utils';
+import {struct} from './data';
 
 const blocksMap = new Map();
 const linesMap = new Map();
@@ -24,7 +24,14 @@ export const init = () => {
   const root = document.getElementById('root');
   const screenWidth = screen.width;
 
-  const parent = struct[0];
+  const ofmDataStr = document.getElementById('ofmData').textContent;
+  let parent;
+  if (ofmDataStr) {
+    const ofmData = JSON.parse(ofmDataStr.replace(new RegExp('[\\n]+\\s\\s+', 'g'), ''));
+    parent = ofmData[0];
+  } else {
+    parent = struct[0];
+  }
 
   // оценка требуемой ширины для вывода ряда иерархии
   // const block_width = getBlockWidth(parent);

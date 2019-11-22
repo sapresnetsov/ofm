@@ -41,10 +41,13 @@ export const createBlock = (x, y, width, height, blockType='default', title, fun
   outerBlock.appendChild(blockBody);
 
   // индикаторы
-  if (!!indicators) {
-    const footerBlock = document.createElement(`div`);
+  const footerBlock = document.createElement(`div`);
+  if (!indicators) {
+    footerBlock.style.visibility = 'hidden';
+  } else {
     footerBlock.setAttribute(`class`, `text_color_indicator`);
     footerBlock.style.top = `${MIN_BLOCK_HEIGHT + blockBorderWidth}px`;
+
     // правая сторона блока рассчитывается как
     // Ширина+Удвоенный padding+Удвоенная Толщина рамки-Ширина индикатора+Удвоенная Толщина рамки индикатора
     let indicatorX = width + H_BLOCK_PADDING * 2 + blockBorderWidth * 2 - IND_WIDTH - BORDER_WIDTH.ind * 2;
@@ -60,8 +63,8 @@ export const createBlock = (x, y, width, height, blockType='default', title, fun
 
       indicatorX -= (IND_WIDTH + BORDER_WIDTH.ind);
     });
-    outerBlock.appendChild(footerBlock);
   }
+  outerBlock.appendChild(footerBlock);
 
   return outerBlock;
 };
