@@ -5,11 +5,11 @@ import {
   BORDER_WIDTH,
   H_BLOCK_PADDING,
   IND_HEIGHT,
-  IND_WIDTH,
+  IND_WIDTH, INDICATOR_TYPE_TEXT,
   MIN_BLOCK_HEIGHT,
 } from './constants';
 
-export const createBlock = (x, y, width, height, blockType='default', title, functions, indicators) => {
+export const createBlock = (x, y, width, height, blockType='default', blockLevel='default', title, functions, indicators) => {
   const outerBlock = document.createElement(`div`);
   outerBlock.setAttribute(`class`, `outer_block`);
   outerBlock.style.left = `${x}px`;
@@ -17,9 +17,9 @@ export const createBlock = (x, y, width, height, blockType='default', title, fun
   outerBlock.style.width = `${width}px`;
   outerBlock.style.height = `${height}px`;
 
-  const blockBorderWidth = BORDER_WIDTH[blockType];
+  const blockBorderWidth = BORDER_WIDTH[blockLevel];
   const blockBody = document.createElement(`div`);
-  blockBody.setAttribute(`class`, `inner_block ${blockType}`);
+  blockBody.setAttribute(`class`, `inner_block ${blockLevel}`);
   blockBody.style.paddingLeft = blockBody.style.paddingRight = `${H_BLOCK_PADDING}px`;
   blockBody.style.borderWidth = `${blockBorderWidth}px`;
   blockBody.style.backgroundColor = `${BACKGROUND_COLOR[blockType]}`;
@@ -47,38 +47,31 @@ export const createBlock = (x, y, width, height, blockType='default', title, fun
   } else {
     footerBlock.setAttribute(`class`, `text_color_indicator`);
     footerBlock.style.top = `${MIN_BLOCK_HEIGHT + blockBorderWidth}px`;
-
+    const indBorderWidth = BORDER_WIDTH.ind;
+    const approxIndicatorBlockWidth = (IND_WIDTH + indBorderWidth * 2) * indicators.length;
+    let indicatorWidth = IND_WIDTH;
+    if (approxIndicatorBlockWidth > width) {
+      indicatorWidth = Math.trunc(width / indicators.length) + indBorderWidth;
+    }
     // правая сторона блока рассчитывается как
     // Ширина+Удвоенный padding+Удвоенная Толщина рамки-Ширина индикатора+Удвоенная Толщина рамки индикатора
-    let indicatorX = width + H_BLOCK_PADDING * 2 + blockBorderWidth * 2 - IND_WIDTH - BORDER_WIDTH.ind * 2;
-    indicators.forEach((ind) => {
+    let indicatorX = width + H_BLOCK_PADDING * 2 + blockBorderWidth * 2 - indicatorWidth - indBorderWidth * 2;
+    indicators.reverse().forEach((ind) => {
       const indicator = document.createElement(`div`);
       indicator.setAttribute(`class`, `indicator ${blockType}`);
       indicator.style.left = `${indicatorX}px`;
-      indicator.style.width = `${IND_WIDTH}px`;
+      indicator.style.width = `${indicatorWidth}px`;
       indicator.style.height = `${IND_HEIGHT}px`;
-      indicator.style.borderWidth = `${BORDER_WIDTH.ind}px`;
-      indicator.textContent = ind;
+      indicator.style.borderWidth = `${indBorderWidth}px`;
+      indicator.innerHTML = `<p style="margin: 0">${INDICATOR_TYPE_TEXT[ind.key]} ${ind.value}</p>`;
       footerBlock.appendChild(indicator);
 
-      indicatorX -= (IND_WIDTH + BORDER_WIDTH.ind);
+      indicatorX -= (indicatorWidth + indBorderWidth);
     });
   }
   outerBlock.appendChild(footerBlock);
 
   return outerBlock;
-};
-
-export const createLeadershipBlock = (x, y, width, height, title, functions, indicators) => {
-  return createBlock(x, y, width, height, `leadership`, title, functions, indicators);
-};
-
-export const createManufacturingBlock = (x, y, width, height, title, functions, indicators) => {
-  return createBlock(x, y, width, height, `manufacturing`, title, functions, indicators);
-};
-
-export const createDefaultBlock = (x, y, width, height, title, functions, indicators) => {
-  return createBlock(x, y, width, height, `default`, title, functions, indicators);
 };
 
 export const createLine = (startPoint, endPoint, lineType) => {
