@@ -3,16 +3,15 @@ import {
   BLOCK_LEVELS,
   BORDER_WIDTH, H_BLOCK_PADDING,
   H_SPACE_BETWEEN_BLOCKS,
-  LEVEL_WIDTH_STEP,
-  PARENT_WIDTH,
+  LEVEL_WIDTH_STEP, MIN_BLOCK_WIDTH,
   V_SPACE_BETWEEN_BLOCKS,
 } from './constants';
 import {MIN_BLOCK_HEIGHT} from './constants';
 import {IND_HEIGHT} from './constants';
 import {
   createBlock,
-  createLeadershipBlock,
   getBlockParams,
+  getDataFromDOM,
 } from './utils';
 import {struct} from './data';
 
@@ -26,7 +25,7 @@ export const init = () => {
   const root = document.getElementById('root');
   const screenWidth = screen.width;
 
-  const ofmDataStr = document.getElementById('ofmData').textContent;
+  const {ofmDataStr, maxDepth} = getDataFromDOM();
   let parent;
   if (ofmDataStr) {
     const ofmData = JSON.parse(ofmDataStr.replace(new RegExp('[\\n]+\\s\\s+', 'g'), ''));
@@ -35,12 +34,13 @@ export const init = () => {
     parent = struct[0];
   }
 
+  const parentWidth = MIN_BLOCK_WIDTH + LEVEL_WIDTH_STEP * maxDepth;
   // оценка требуемой ширины для вывода ряда иерархии
   // const block_width = getBlockWidth(parent);
   // TODO корневой блок придется перемещать после отрисовки всех блоков
-  const x = screenWidth / 2 - PARENT_WIDTH / 2;
+  const x = screenWidth / 2 - parentWidth / 2;
   const y = 20;
-  const parentBlock = createBlock(x, y, PARENT_WIDTH, MIN_BLOCK_HEIGHT, parent.type, parent.level, parent.title, parent.functions, parent.indicators);
+  const parentBlock = createBlock(x, y, parentWidth, MIN_BLOCK_HEIGHT, parent.type, parent.level, parent.title, parent.functions, parent.indicators);
   root.appendChild(parentBlock);
 
   let newHeight = parentBlock.children[0].clientHeight;
@@ -60,20 +60,31 @@ export const init = () => {
   const parentBlockParams = blockParamsMap.get(parent.id);
   drawFirstLayer(root, blocksMap, blockParamsMap, parent, parentBlockParams);
 
+  let fullWidth = 0;
   let nextShift = 0;
-  parent.children.forEach((child) => {
+  let shiftsCount = 0;
+  parent.children.forEach((child, i) => {
     if (!!nextShift) {
       const childBlock = blocksMap.get(child.id);
-      childBlock.style.left = `${blockParamsMap.get(child.id).x + nextShift - blockParamsMap.get(child.id).width / 2}px`;
+      const childBlockParams = blockParamsMap.get(child.id);
+      childBlock.style.left = `${childBlockParams.x + nextShift - childBlockParams.width * shiftsCount}px`;
       blockParamsMap.set(child.id, getBlockParams(childBlock));
     }
-    const shift = drawColumn(blocksMap, blockParamsMap, child, blockParamsMap.get(child.id));
+    const childBlockParams = blockParamsMap.get(child.id);
+    const shift = drawColumn(blocksMap, blockParamsMap, child, childBlockParams);
     if (!!shift[0]) {
       nextShift += shift[0];
+      shiftsCount++;
+    }
+    if (i === (parent.children.length - 1)) {
+      fullWidth = childBlockParams.right_p.x;
     }
   });
 
+  // итоговое выравнивание корневого элемента по общей ширине схемы
+  parentBlock.style.left = `${fullWidth / 2 - parentWidth / 2}px`;
 
+  // отрисовка соединяющих линий
 };
 
 /**
@@ -93,6 +104,8 @@ const drawColumn = (blocksMap, blockParamsMap, parent, parentParams,) => {
   let y = parentParams.bottom_p.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
   let retVerticalShift = 0;
   let retHorizontalShift = 0;
+
+  const childrenCount = parent.children.length;
 
   let i;
   parent.children.forEach((child) => {
@@ -119,13 +132,14 @@ const drawColumn = (blocksMap, blockParamsMap, parent, parentParams,) => {
       retVerticalShift += V_SPACE_BETWEEN_BLOCKS;
     }
     // отрисовка потомков
+    const shift = drawColumn(blocksMap, blockParamsMap, child, blockParamsMap.get(child.id));
+
     // если у ШД 1/2 уровня есть несколько потомков, то их необходимо выводить в несколько стобцов
     // при этом требуется сдвинуть блок с самой ШД, а также следующие блоки с ШД
-    if ((parent.otype === 'S') && (parent.level) === BLOCK_LEVELS.second) {
+    if ((parent.otype === 'S') && (parent.level) === BLOCK_LEVELS.second && childrenCount > 1) {
       x = blockParamsMap.get(child.id).right_p.x + H_SPACE_BETWEEN_BLOCKS;
       childrensDrawnInline = true;
     } else {
-      const shift = drawColumn(blocksMap, blockParamsMap, child, blocksMap.get(child.id));
       y = blockParamsMap.get(child.id).bottom_p.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS + shift[1];
     }
   });
@@ -135,9 +149,9 @@ const drawColumn = (blocksMap, blockParamsMap, parent, parentParams,) => {
     parent.children.forEach((child) => {
       childrenWidth += blockParamsMap.get(child.id).width;
     });
-    childrenWidth += H_SPACE_BETWEEN_BLOCKS * (parent.children.length - 1);
+    childrenWidth += H_SPACE_BETWEEN_BLOCKS * (parent.children.length);
     const parentBlock = blocksMap.get(parent.id);
-    parentBlock.style.left = `${blockParamsMap.get(parent.id).x + childrenWidth / 2 - blockParamsMap.get(parent.id).width / 2}px`;
+    parentBlock.style.left = `${parentParams.x + childrenWidth / 2 - parentParams.width / 2 + LEVEL_WIDTH_STEP * (childrenCount - 1) / 2}px`;
     retHorizontalShift = childrenWidth;
   }
   return [retHorizontalShift, retVerticalShift];
@@ -156,7 +170,7 @@ const drawFirstLayer = (root, blocksMap, blockParamsMap, parent, parentParams) =
 
   let maxHeight = MIN_BLOCK_HEIGHT;
   let newHeight = MIN_BLOCK_HEIGHT;
-  const width = PARENT_WIDTH - 20;
+  const width = parentParams.width - LEVEL_WIDTH_STEP;
   const height = MIN_BLOCK_HEIGHT;
   const count = parent.children.length;
 

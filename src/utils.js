@@ -143,3 +143,14 @@ export const getBlockParams = (block) => {
     right_p: getPoint(left + width + borderWidth * 2, top + height / 2),
   };
 };
+
+/**
+ * Получение данных через index.html
+ * @return {{maxDepth: string, ofmDataStr: string}}
+ */
+export const getDataFromDOM = () => {
+  const ofmDataStr = document.getElementById('ofmData').textContent;
+  const maxDepth = document.getElementById('maxDepth').textContent;
+
+  return {ofmDataStr, maxDepth};
+};
