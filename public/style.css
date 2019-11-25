@@ -23,7 +23,6 @@ h3.first_level {
 p.function_text {
     margin: 0;
     padding-bottom: 2pt;
-    font-size: 12pt;
 }
 div{
     position: absolute;
@@ -42,39 +41,72 @@ div.inner_block {
     text-align: center;
 }
 
-div.leadership {
+div.firstLevel {
+    border-style: double;
+    border-color: black;
+}
+div.secondLevel {
+    border-style: double;
+    border-color: black;
+}
+div.secondLevel {
     border-style: double;
     border-color: black;
 }
 
-div.deputy {
+div.first {
     border-style: double;
     border-color: black;
 }
+.first h3 {
+    font-size: 15pt;
+}
+.first p {
+    font-size: 10pt;
+}
 
-div.manufacturing {
+div.second {
+    border-style: double;
+    border-color: black;
+}
+.second h3{
+    font-size: 12pt;
+}
+.second p {
+    font-size: 8pt;
+}
+
+div.independent {
     border-style: solid;
     border-color: black;
 }
+.independent h3 {
+    font-size: 11pt;
+}
+.independent p {
+    font-size: 8pt;
+}
 
-div.management {
+div.dependent {
     border-style: solid;
     border-color: black;
 }
-
-div.economy {
-    border-style: solid;
-    border-color: black;
+.dependent h3 {
+    font-size: 9pt;
 }
-
-div.technical {
-    border-style: solid;
-    border-color: black;
+.dependent p {
+    font-size: 7pt;
 }
 
 div.default {
     border-style: solid;
     border-color: black;
+}
+.default h3 {
+
+}
+.default p {
+
 }
 
 div.indicator {
@@ -82,7 +114,7 @@ div.indicator {
     border-color: black;
     border-top: 0;
     background-color: lightyellow;
-    font-size: 10pt;
+    font-size: 6pt;
     text-align: center;
 }
 
