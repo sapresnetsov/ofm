@@ -54,6 +54,12 @@ export const INDICATOR_TYPE_TEXT = {
   NZMIN: `N<sub>з</sub> min`,
 };
 
+export const TOP = `top`;
+export const BOTTOM = `bottom`;
+export const LEFT = `left`;
+export const RIGHT = `right`;
+
+
 export const MIN_BLOCK_WIDTH = 250;
 export const MAX_BLOCK_WIDTH = 300;
 export const MIN_BLOCK_HEIGHT = 100;

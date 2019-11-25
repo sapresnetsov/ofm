@@ -1,15 +1,15 @@
 import './../public/style.css';
 import {
   BLOCK_LEVELS,
-  BORDER_WIDTH, H_BLOCK_PADDING,
-  H_SPACE_BETWEEN_BLOCKS,
-  LEVEL_WIDTH_STEP, MIN_BLOCK_WIDTH,
+  BORDER_WIDTH, BOTTOM, H_BLOCK_PADDING,
+  H_SPACE_BETWEEN_BLOCKS, LEFT,
+  LEVEL_WIDTH_STEP, MIN_BLOCK_WIDTH, TOP,
   V_SPACE_BETWEEN_BLOCKS,
 } from './constants';
 import {MIN_BLOCK_HEIGHT} from './constants';
 import {IND_HEIGHT} from './constants';
 import {
-  createBlock,
+  createBlock, createUpsideDownConnector,
   getBlockParams,
   getDataFromDOM,
 } from './utils';
@@ -22,6 +22,14 @@ const layersMap = new Map();
 
 // Инициализация отрисовки схемы
 export const init = () => {
+  // полифилл для IE
+  if (!Math.trunc) {
+    Math.trunc = function(v) {
+      v = +v;
+      return (v - v % 1) || (!isFinite(v) || v === 0 ? v : v < 0 ? -0 : 0);
+    };
+  }
+
   const root = document.getElementById('root');
   const screenWidth = screen.width;
 
@@ -34,10 +42,8 @@ export const init = () => {
     parent = struct[0];
   }
 
+  // первоначально корневой блок отрисовывается посередине экрана
   const parentWidth = MIN_BLOCK_WIDTH + LEVEL_WIDTH_STEP * maxDepth;
-  // оценка требуемой ширины для вывода ряда иерархии
-  // const block_width = getBlockWidth(parent);
-  // TODO корневой блок придется перемещать после отрисовки всех блоков
   const x = screenWidth / 2 - parentWidth / 2;
   const y = 20;
   const parentBlock = createBlock(x, y, parentWidth, MIN_BLOCK_HEIGHT, parent.type, parent.level, parent.title, parent.functions, parent.indicators);
@@ -57,8 +63,8 @@ export const init = () => {
   blocksMap.set(parent.id, parentBlock);
   blockParamsMap.set(parent.id, getBlockParams(parentBlock));
 
-  const parentBlockParams = blockParamsMap.get(parent.id);
-  drawFirstLayer(root, blocksMap, blockParamsMap, parent, parentBlockParams);
+  let parentBlockParams = blockParamsMap.get(parent.id);
+  drawFirstRow(root, blocksMap, blockParamsMap, parent, parentBlockParams);
 
   let fullWidth = 0;
   let nextShift = 0;
@@ -76,15 +82,24 @@ export const init = () => {
       nextShift += shift[0];
       shiftsCount++;
     }
+    // общая ширина схемы определяется по правой точке последнего блока
     if (i === (parent.children.length - 1)) {
-      fullWidth = childBlockParams.right_p.x;
+      fullWidth = childBlockParams.right.x;
     }
   });
 
   // итоговое выравнивание корневого элемента по общей ширине схемы
   parentBlock.style.left = `${fullWidth / 2 - parentWidth / 2}px`;
+  blockParamsMap.set(parent.id, getBlockParams(parentBlock));
+  parentBlockParams = blockParamsMap.get(parent.id);
 
   // отрисовка соединяющих линий
+  parent.children.forEach((child) => {
+    const childBlockParams = blockParamsMap.get(child.id);
+    createUpsideDownConnector(root, parentBlockParams, childBlockParams, BOTTOM, TOP);
+
+    drawConnectors(blockParamsMap, child);
+  });
 };
 
 /**
@@ -101,7 +116,7 @@ const drawColumn = (blocksMap, blockParamsMap, parent, parentParams,) => {
   const height = MIN_BLOCK_HEIGHT;
 
   let x = parentParams.x + LEVEL_WIDTH_STEP + parentParams.borderWidth * 2;
-  let y = parentParams.bottom_p.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+  let y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
   let retVerticalShift = 0;
   let retHorizontalShift = 0;
 
@@ -137,10 +152,10 @@ const drawColumn = (blocksMap, blockParamsMap, parent, parentParams,) => {
     // если у ШД 1/2 уровня есть несколько потомков, то их необходимо выводить в несколько стобцов
     // при этом требуется сдвинуть блок с самой ШД, а также следующие блоки с ШД
     if ((parent.otype === 'S') && (parent.level) === BLOCK_LEVELS.second && childrenCount > 1) {
-      x = blockParamsMap.get(child.id).right_p.x + H_SPACE_BETWEEN_BLOCKS;
+      x = blockParamsMap.get(child.id).right.x + H_SPACE_BETWEEN_BLOCKS;
       childrensDrawnInline = true;
     } else {
-      y = blockParamsMap.get(child.id).bottom_p.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS + shift[1];
+      y = blockParamsMap.get(child.id).bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS + shift[1];
     }
   });
 
@@ -152,6 +167,7 @@ const drawColumn = (blocksMap, blockParamsMap, parent, parentParams,) => {
     childrenWidth += H_SPACE_BETWEEN_BLOCKS * (parent.children.length);
     const parentBlock = blocksMap.get(parent.id);
     parentBlock.style.left = `${parentParams.x + childrenWidth / 2 - parentParams.width / 2 + LEVEL_WIDTH_STEP * (childrenCount - 1) / 2}px`;
+    blockParamsMap.set(parent.id, getBlockParams(parentBlock));
     retHorizontalShift = childrenWidth;
   }
   return [retHorizontalShift, retVerticalShift];
@@ -165,7 +181,7 @@ const drawColumn = (blocksMap, blockParamsMap, parent, parentParams,) => {
  * @param {Object} parent
  * @param {Object} parentParams
  */
-const drawFirstLayer = (root, blocksMap, blockParamsMap, parent, parentParams) => {
+const drawFirstRow = (root, blocksMap, blockParamsMap, parent, parentParams) => {
   const childrenBlocksMap = new Map();
 
   let maxHeight = MIN_BLOCK_HEIGHT;
@@ -179,7 +195,7 @@ const drawFirstLayer = (root, blocksMap, blockParamsMap, parent, parentParams) =
   if (x < 0) {
     x = H_SPACE_BETWEEN_BLOCKS;
   }
-  const y = parentParams.bottom_p.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+  const y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
 
   parent.children.forEach((child) => {
     const blockType = child.type || 'default';
@@ -217,12 +233,25 @@ const drawFirstLayer = (root, blocksMap, blockParamsMap, parent, parentParams) =
   });
 };
 
-const drawConnectors = () => {
+const drawConnectors = (blockParamsMap, parent) => {
+  const parentBlockParams = blockParamsMap.get(parent.id);
+  let fromSide;
+  let toSide;
 
-};
+  if (parent.otype === 'S') {
+    fromSide = BOTTOM;
+    toSide = TOP;
+  } else {
+    fromSide = LEFT;
+    toSide = LEFT;
+  }
 
-const getBlockWidth = (parent) => {
-  const firstLevelChildrenCount = parent.children.length;
+  parent.children.forEach((child) => {
+    const childBlockParams = blockParamsMap.get(child.id);
+    createUpsideDownConnector(root, parentBlockParams, childBlockParams, fromSide, toSide);
+
+    drawConnectors(blockParamsMap, child);
+  });
 };
 
 init();
