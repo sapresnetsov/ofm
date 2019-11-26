@@ -61,22 +61,33 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
     footerBlock.setAttribute(`class`, `text_color_indicator`);
     footerBlock.style.top = `${MIN_BLOCK_HEIGHT + blockBorderWidth}px`;
     const indBorderWidth = BORDER_WIDTH.ind;
-    const approxIndicatorBlockWidth = (IND_WIDTH + indBorderWidth * 2) * indicators.length;
     let indicatorWidth = IND_WIDTH;
-    if (approxIndicatorBlockWidth > width) {
-      indicatorWidth = Math.trunc(width / indicators.length) + indBorderWidth;
+    let indWidthDiff;
+    const indicatorsLength = indicators.length;
+    // TODO продумать, а то получается какая-то дичь
+    if (indicatorsLength > 3) {
+      indicatorWidth = Math.trunc((width + blockBorderWidth * 2) / indicatorsLength) + indBorderWidth;
+      indWidthDiff = (width + blockBorderWidth * 2 - indicatorWidth * indicatorsLength) + 2;
     }
+
     // правая сторона блока рассчитывается как
     // Ширина+Удвоенный padding+Удвоенная Толщина рамки-Ширина индикатора+Удвоенная Толщина рамки индикатора
     let indicatorX = width + H_BLOCK_PADDING * 2 + blockBorderWidth * 2 - indicatorWidth - indBorderWidth * 2;
-    indicators.reverse().forEach((ind) => {
+    indicators.reverse().forEach((ind, i) => {
       const indicator = document.createElement(`div`);
       indicator.setAttribute(`class`, `indicator ${blockType}`);
+      if (i === indicatorsLength - 1 && indicatorsLength > 3) {
+        indicatorWidth += indWidthDiff;
+        indicatorX -= indWidthDiff;
+      }
       indicator.style.left = `${indicatorX}px`;
       indicator.style.width = `${indicatorWidth}px`;
       indicator.style.height = `${IND_HEIGHT}px`;
       indicator.style.borderWidth = `${indBorderWidth}px`;
       indicator.innerHTML = `<p style="margin: 0">${INDICATOR_TYPE_TEXT[ind.key]} ${ind.value}</p>`;
+      if (i !== 0) {
+        indicator.style.borderRight = `0`;
+      }
       footerBlock.appendChild(indicator);
 
       indicatorX -= (indicatorWidth + indBorderWidth);
@@ -112,6 +123,8 @@ export const getBlockParams = (block) => {
   const height = parseInt(block.children[0].style.height, 10);
   // рамка устанавливается у внутреннего блока
   const borderWidth = parseInt(block.children[0].style.borderWidth, 10);
+  const innerPaddingLeft = parseInt(block.children[0].style.paddingLeft, 10);
+  const innerPaddingRight = parseInt(block.children[0].style.paddingRight, 10);
   return {
     x: left,
     y: top,
@@ -119,9 +132,9 @@ export const getBlockParams = (block) => {
     height: height,
     borderWidth: borderWidth,
     top: getPoint(left + width / 2, top),
-    bottom: getPoint(left + width / 2, top + height + borderWidth * 2),
+    bottom: getPoint(left + width / 2 + innerPaddingLeft, top + height + borderWidth * 2),
     left: getPoint(left, top + height / 2),
-    right: getPoint(left + width + borderWidth * 2, top + height / 2),
+    right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
   };
 };
 
@@ -181,10 +194,11 @@ export const createLine = (root, startPoint, endPoint, lineType) => {
 };
 
 // пока реализация предполагает только соединение низа и верха, либо бока и бока
-export const createUpsideDownConnector = (root, blockFrom, blockTo, fromSide, toSide) => {
+export const createUpsideDownConnector = (root, linesMap, blockFrom, blockTo, fromSide, toSide) => {
   const fromPoint = getPointOfSide(blockFrom, fromSide);
   const toPoint = getPointOfSide(blockTo, toSide);
 
+  const stdNodeShift = 15;
   // точки соединения находятся на одной вертикали
   if (fromSide === BOTTOM && toSide === TOP) {
     if (fromPoint.x >= (toPoint.x) && fromPoint.x <= (toPoint.x)) {
@@ -192,9 +206,10 @@ export const createUpsideDownConnector = (root, blockFrom, blockTo, fromSide, to
       return;
     }
 
-    const yMiddle = Math.abs(fromPoint.y - blockTo.top.y) / 2;
-    const parMidPoint = getPoint(fromPoint.x, fromPoint.y + yMiddle);
-    const childMidPoint = getPoint(toPoint.x, fromPoint.y + yMiddle);
+    // const yMiddle = Math.abs(fromPoint.y - blockTo.top.y) / 2;
+    const yMiddle = toPoint.y - stdNodeShift;
+    const parMidPoint = getPoint(fromPoint.x, yMiddle);
+    const childMidPoint = getPoint(toPoint.x, yMiddle);
 
     // ломаная линия
     createLine(root, fromPoint, parMidPoint, 'vertical_line');
@@ -202,7 +217,10 @@ export const createUpsideDownConnector = (root, blockFrom, blockTo, fromSide, to
     createLine(root, childMidPoint, toPoint, 'vertical_line');
   }
 
-  const stdNodeShift = 10;
+  if (fromSide === BOTTOM && toSide === LEFT) {
+
+  }
+
   if (fromSide === LEFT && toSide === LEFT) {
     // блок снизу и правее
     if (toPoint.x >= fromPoint.x ) {
@@ -219,10 +237,8 @@ export const createUpsideDownConnector = (root, blockFrom, blockTo, fromSide, to
   if (fromSide === RIGHT && toSide === LEFT) {
     // блок снизу и правее
     if (toPoint.x >= fromPoint.x ) {
-      const yDiff = Math.abs(fromPoint.y - toPoint.y);
-      const parMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y);
-      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y + yDiff);
-
+      const parMidPoint = getPoint(toPoint.x - stdNodeShift, fromPoint.y);
+      const childMidPoint = getPoint(toPoint.x - stdNodeShift, toPoint.y);
       createLine(root, fromPoint, parMidPoint, 'horizontal_line');
       createLine(root, parMidPoint, childMidPoint, 'vertical_line');
       createLine(root, childMidPoint, toPoint, 'horizontal_line');
