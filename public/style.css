@@ -124,3 +124,15 @@ div.indicator {
 .text_color_indicator {
     color: blue;
 }
+
+div.line {
+    border: 0.5px solid black;
+}
+
+div.vertical_line {
+    width: 0;
+}
+
+div.horizontal_line {
+    height: 0;
+}
