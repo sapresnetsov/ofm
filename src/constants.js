@@ -42,18 +42,6 @@ export const BACKGROUND_COLOR = {
   ind: `#ffffca`,
 };
 
-export const INDICATOR_TYPE_TEXT = {
-  N: `N`,
-  NRP: `Рук`,
-  NPP: `N<sub>пп</sub>`,
-  NPP_: `N<sub>пп</sub>'`,
-  NFP: `N<sub>фп</sub>`,
-  NUP: `N<sub>уп</sub>`,
-  KZV: `К<sub>зв</sub>`,
-  KZV_: `К<sub>зв</sub>'`,
-  NZMIN: `N<sub>з</sub> min`,
-};
-
 export const POSITION = 'S';
 export const ORG_UNIT = 'O';
 

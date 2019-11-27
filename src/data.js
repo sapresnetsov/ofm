@@ -20,11 +20,11 @@ export const struct = [{
       ],
       'indicators': [
         {
-          'key': 'NPP',
+          'key': 'N<sub>пп</sub>',
           'value': 16,
         },
         {
-          'key': 'NPP_',
+          'key': 'N<sub>пп</sub>_',
           'value': 1,
         },
         {
@@ -342,11 +342,11 @@ export const struct = [{
       ],
       'indicators': [
         {
-          'key': 'NPP',
+          'key': 'N<sub>пп</sub>',
           'value': 7,
         },
         {
-          'key': 'NPP_',
+          'key': 'N<sub>пп</sub>_',
           'value': 2,
         },
         {
@@ -371,11 +371,11 @@ export const struct = [{
       ],
       'indicators': [
         {
-          'key': 'NPP',
+          'key': 'N<sub>пп</sub>',
           'value': 8,
         },
         {
-          'key': 'NPP_',
+          'key': 'N<sub>пп</sub>_',
           'value': 0,
         },
         {
@@ -506,11 +506,11 @@ export const struct = [{
       ],
       'indicators': [
         {
-          'key': 'NPP',
+          'key': 'N<sub>пп</sub>',
           'value': 15,
         },
         {
-          'key': 'NPP_',
+          'key': 'N<sub>пп</sub>_',
           'value': 12,
         },
         {
@@ -537,11 +537,11 @@ export const struct = [{
       ],
       'indicators': [
         {
-          'key': 'NPP',
+          'key': 'N<sub>пп</sub>',
           'value': 6,
         },
         {
-          'key': 'NPP_',
+          'key': 'N<sub>пп</sub>_',
           'value': 3,
         },
         {
@@ -743,11 +743,11 @@ export const struct = [{
       ],
       'indicators': [
         {
-          'key': 'NPP',
+          'key': 'N<sub>пп</sub>',
           'value': 0,
         },
         {
-          'key': 'NPP_',
+          'key': 'N<sub>пп</sub>_',
           'value': 21,
         },
         {
@@ -771,11 +771,11 @@ export const struct = [{
       ],
       'indicators': [
         {
-          'key': 'NPP',
+          'key': 'N<sub>пп</sub>',
           'value': 0,
         },
         {
-          'key': 'NPP_',
+          'key': 'N<sub>пп</sub>_',
           'value': 4,
         },
         {
@@ -803,11 +803,11 @@ export const struct = [{
       ],
       'indicators': [
         {
-          'key': 'NPP',
+          'key': 'N<sub>пп</sub>',
           'value': 0,
         },
         {
-          'key': 'NPP_',
+          'key': 'N<sub>пп</sub>_',
           'value': 4,
         },
         {
@@ -857,11 +857,11 @@ export const struct = [{
 //   'functions': {},
 //   'indicators': [
 //     {
-//       'key': 'NPP',
+//       'key': 'N<sub>пп</sub>',
 //       'value': 3,
 //     },
 //     {
-//       'key': 'NPP_',
+//       'key': 'N<sub>пп</sub>_',
 //       'value': 3,
 //     },
 //   ],
@@ -879,11 +879,11 @@ export const struct = [{
 //       ],
 //       'indicators': [
 //         {
-//           'key': 'NPP',
+//           'key': 'N<sub>пп</sub>',
 //           'value': 3,
 //         },
 //         {
-//           'key': 'NPP_',
+//           'key': 'N<sub>пп</sub>_',
 //           'value': 3,
 //         },
 //         {
@@ -1049,11 +1049,11 @@ export const struct = [{
 //         '25. Ключевая функция'],
 //       'indicators': [
 //         {
-//           'key': 'NPP',
+//           'key': 'N<sub>пп</sub>',
 //           'value': 3,
 //         },
 //         {
-//           'key': 'NPP_',
+//           'key': 'N<sub>пп</sub>_',
 //           'value': 3,
 //         },
 //         {
@@ -1086,11 +1086,11 @@ export const struct = [{
 //       'functions': {},
 //       'indicators': [
 //         {
-//           'key': 'NPP',
+//           'key': 'N<sub>пп</sub>',
 //           'value': 3,
 //         },
 //         {
-//           'key': 'NPP_',
+//           'key': 'N<sub>пп</sub>_',
 //           'value': 3,
 //         },
 //         {
@@ -1123,11 +1123,11 @@ export const struct = [{
 //       'functions': {},
 //       'indicators': [
 //         {
-//           'key': 'NPP',
+//           'key': 'N<sub>пп</sub>',
 //           'value': 3,
 //         },
 //         {
-//           'key': 'NPP_',
+//           'key': 'N<sub>пп</sub>_',
 //           'value': 3,
 //         },
 //         {

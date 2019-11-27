@@ -5,7 +5,7 @@ import {
   BORDER_WIDTH, BOTTOM,
   H_BLOCK_PADDING,
   IND_HEIGHT,
-  IND_WIDTH, INDICATOR_TYPE_TEXT, LEFT,
+  IND_WIDTH, LEFT,
   MIN_BLOCK_HEIGHT, RIGHT, TOP,
 } from './constants';
 
@@ -84,7 +84,7 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
       indicator.style.width = `${indicatorWidth}px`;
       indicator.style.height = `${IND_HEIGHT}px`;
       indicator.style.borderWidth = `${indBorderWidth}px`;
-      indicator.innerHTML = `<p style="margin: 0">${INDICATOR_TYPE_TEXT[ind.key]} ${ind.value}</p>`;
+      indicator.innerHTML = `<p style="margin: 0">${ind.key} ${ind.value}</p>`;
       if (i !== 0) {
         indicator.style.borderRight = `0`;
       }
