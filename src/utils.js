@@ -193,28 +193,47 @@ export const createLine = (root, startPoint, endPoint, lineType) => {
   root.appendChild(line);
 };
 
-// пока реализация предполагает только соединение низа и верха, либо бока и бока
-export const createUpsideDownConnector = (root, linesMap, blockFrom, blockTo, fromSide, toSide) => {
+/**
+ * пока реализация предполагает только соединение низа и верха, либо бока и бока
+ * @param {HTMLElement} root
+ * @param {Map} linesMap
+ * @param {Object | undefined} orgUnitArea
+ * @param {Object} blockFrom
+ * @param {Object} blockTo
+ * @param {string} fromSide
+ * @param {string} toSide
+ */
+export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom, blockTo, fromSide, toSide) => {
   const fromPoint = getPointOfSide(blockFrom, fromSide);
   const toPoint = getPointOfSide(blockTo, toSide);
 
   const stdNodeShift = 15;
   // точки соединения находятся на одной вертикали
   if (fromSide === BOTTOM && toSide === TOP) {
-    if (fromPoint.x >= (toPoint.x) && fromPoint.x <= (toPoint.x)) {
+    if (fromPoint.x === (toPoint.x)) {
       createLine(root, fromPoint, toPoint, 'vertical_line');
       return;
     }
+    if (!orgUnitArea) {
+      // ломаная линия из трех звеньев
+      const yMiddle = toPoint.y - stdNodeShift;
+      const parMidPoint = getPoint(fromPoint.x, yMiddle);
+      const childMidPoint = getPoint(toPoint.x, yMiddle);
+      createLine(root, fromPoint, parMidPoint, 'vertical_line');
+      createLine(root, parMidPoint, childMidPoint, 'horizontal_line');
+      createLine(root, childMidPoint, toPoint, 'vertical_line');
+    } else {
+      const topAreaPoint = getPoint(fromPoint.x, orgUnitArea.y - stdNodeShift);
+      const topLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, orgUnitArea.y - stdNodeShift);
+      const bottomLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, toPoint.y - stdNodeShift);
+      const bottomAreaPoint = getPoint(toPoint.x, toPoint.y - stdNodeShift);
 
-    // const yMiddle = Math.abs(fromPoint.y - blockTo.top.y) / 2;
-    const yMiddle = toPoint.y - stdNodeShift;
-    const parMidPoint = getPoint(fromPoint.x, yMiddle);
-    const childMidPoint = getPoint(toPoint.x, yMiddle);
-
-    // ломаная линия
-    createLine(root, fromPoint, parMidPoint, 'vertical_line');
-    createLine(root, parMidPoint, childMidPoint, 'horizontal_line');
-    createLine(root, childMidPoint, toPoint, 'vertical_line');
+      createLine(root, fromPoint, topAreaPoint, 'vertical_line');
+      createLine(root, topAreaPoint, topLeftAreaPoint, 'horizontal_line');
+      createLine(root, topLeftAreaPoint, bottomLeftAreaPoint, 'vertical_line');
+      createLine(root, bottomLeftAreaPoint, bottomAreaPoint, 'horizontal_line');
+      createLine(root, bottomAreaPoint, toPoint, 'vertical_line');
+    }
   }
 
   if (fromSide === BOTTOM && toSide === LEFT) {

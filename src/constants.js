@@ -1,8 +1,3 @@
-export const svgNS = `http://www.w3.org/2000/svg`;
-export const TITLE_FONT_SIZE = `14pt`;
-export const FUNC_FONT_SIZE = `12pt`;
-export const TITLE_SPACE_AFTER = `5pt`;
-
 export const BLOCK_TYPES = {
   leadership: `leadership`,
   deputy: `deputy`,
@@ -16,6 +11,7 @@ export const BLOCK_TYPES = {
 export const BLOCK_LEVELS = {
   first: 'first',
   second: 'second',
+  third: 'third',
   independent: 'independent',
   dependent: 'dependent',
   default: 'default',
