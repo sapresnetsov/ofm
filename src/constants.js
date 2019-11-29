@@ -30,7 +30,7 @@ export const BORDER_WIDTH = {
 export const BACKGROUND_COLOR = {
   leadership: `#d9d9d9`,
   deputy: `#d9d9d9`,
-  manufacturing: `#d8e3bf`,
+  manufacturing: `#e35044`,
   technical: `#daeef3`,
   economy: `#f9fcd1`,
   management: `#dfd9e8`,
@@ -40,6 +40,10 @@ export const BACKGROUND_COLOR = {
 
 export const POSITION = 'S';
 export const ORG_UNIT = 'O';
+
+export const GOVERNANCE = 'U';
+export const ASSIGNED_STAFF = 'X';
+export const STRUCTURAL_UNIT = 'S';
 
 export const TOP = `top`;
 export const BOTTOM = `bottom`;

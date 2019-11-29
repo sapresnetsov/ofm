@@ -1,7 +1,8 @@
 import './../public/style.css';
 import {
+  ASSIGNED_STAFF,
   BLOCK_LEVELS,
-  BOTTOM, H_BLOCK_PADDING,
+  BOTTOM, GOVERNANCE, H_BLOCK_PADDING,
   H_SPACE_BETWEEN_BLOCKS, LEFT,
   LEVEL_WIDTH_STEP, MIN_BLOCK_WIDTH, ORG_UNIT, POSITION, RIGHT, TOP,
   V_SPACE_BETWEEN_BLOCKS,
@@ -19,6 +20,7 @@ const blocksMap = new Map();
 const blockParamsMap = new Map();
 const linesMap = new Map();
 const orgUnitAreasMap = new Map();
+const assignedStaffAreasMap = new Map();
 
 // Инициализация отрисовки схемы
 export const drawScheme = (ofmDataStr, maxDepth) => {
@@ -48,7 +50,7 @@ export const drawScheme = (ofmDataStr, maxDepth) => {
 
   // итоговое выравнивание корневого элемента по общей ширине схемы
   parentBlock.style.left = `${fullWidth / 2 - parentWidth / 2}px`;
-  blockParamsMap.set(parent.id, getBlockParams(parentBlock));
+  blockParamsMap.set(parent.id, getBlockParams(parentBlock, parent));
   parentBlockParams = blockParamsMap.get(parent.id);
 
   // отрисовка соединяющих линий
@@ -66,6 +68,53 @@ export const drawScheme = (ofmDataStr, maxDepth) => {
 };
 
 /**
+ * Отрисовка блоков с единицами управления
+ * @param {Map} blocksMap
+ * @param {Map} blockParamsMap
+ * @param {Object} parent
+ * @param {Object} parentParams
+ */
+const drawFirstRow = (blocksMap, blockParamsMap, parent, parentParams) => {
+  let maxHeight = MIN_BLOCK_HEIGHT;
+  let newHeight = MIN_BLOCK_HEIGHT;
+
+  const width = parentParams.width - LEVEL_WIDTH_STEP;
+  const height = MIN_BLOCK_HEIGHT;
+  let x = H_SPACE_BETWEEN_BLOCKS;
+  const y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+
+  parent.children.forEach((child) => {
+    const childBlock = appendBlock(x, y, width, height, child, blocksMap, blockParamsMap);
+    const childHeight = parseInt(childBlock.children[0].clientHeight);
+    const borderWidth = parseInt(childBlock.children[0].style.borderWidth);
+
+    if (childHeight > maxHeight) {
+      maxHeight = childHeight;
+      newHeight = childHeight;
+    }
+
+    x += width + H_BLOCK_PADDING + borderWidth * 2 + H_SPACE_BETWEEN_BLOCKS;
+  });
+
+  if (maxHeight > height) {
+    maxHeight += IND_HEIGHT;
+  } else {
+    maxHeight = height;
+  }
+
+  // пересчет высоты блоков и добавление в глобальный map
+  parent.children.forEach((child) => {
+    const childBlock = blocksMap.get(child.id);
+    const indicatorBlockTop = newHeight + parseInt(childBlock.children[0].style.borderWidth, 10) * 2;
+    childBlock.style.height = maxHeight + 'px';
+    childBlock.children[0].style.height = newHeight + 'px';
+    childBlock.children[1].style.top = indicatorBlockTop + 'px';
+    blocksMap.set(child.id, childBlock);
+    blockParamsMap.set(child.id, getBlockParams(childBlock, child));
+  });
+};
+
+/**
  * Отрисовка блоков схемы, которые выводятся вертикально
  * @param {Map} blocksMap
  * @param {Map} blockParamsMap
@@ -75,13 +124,14 @@ const drawColumns = (blocksMap, blockParamsMap, parent) => {
   // TODO необходимо нормально обозвать переменные
   let nextShift = 0;
   let shiftsCount = 0;
+  let maxAssignedStaffVerticalShift;
   parent.children.forEach((child) => {
     // сдвиг блока вправо
     if (nextShift) {
       const childBlock = blocksMap.get(child.id);
       const childBlockParams = blockParamsMap.get(child.id);
       childBlock.style.left = `${childBlockParams.x + nextShift - childBlockParams.width * shiftsCount}px`;
-      blockParamsMap.set(child.id, getBlockParams(childBlock));
+      blockParamsMap.set(child.id, getBlockParams(childBlock, child));
     }
     let childBlockParams = blockParamsMap.get(child.id);
 
@@ -90,9 +140,14 @@ const drawColumns = (blocksMap, blockParamsMap, parent) => {
     const shift = drawOrgUnits(blocksMap, blockParamsMap, orgUnitArea, child, childBlockParams);
     orgUnitAreasMap.set(child.id, orgUnitArea);
 
+    if (maxAssignedStaffVerticalShift < orgUnitArea.y + orgUnitArea.height) {
+      maxAssignedStaffVerticalShift = orgUnitArea.y + orgUnitArea.height;
+    }
+
     // отрисовка блоков с приписным штатом
     const assignedStaffArea = {};
     drawAssignedStaff(blocksMap, blockParamsMap, orgUnitArea, assignedStaffArea, child, childBlockParams);
+
 
     // отрисовка блоков со структурными подразделениями
     drawStructuralUnits(blocksMap, blockParamsMap, orgUnitArea, assignedStaffArea, child, childBlockParams);
@@ -114,14 +169,18 @@ const drawColumns = (blocksMap, blockParamsMap, parent) => {
       shiftsCount++;
     }
   });
-};
 
-const drawAssignedStaff = (blocksMap, blockParamsMap, orgUnitArea, assignedStaffArea, parent, parentParams) => {
+  // сдвиг блоков приписного штата вниз
+  blockParamsMap.forEach((block) => {
+    if (block.additionalInfo === ASSIGNED_STAFF) {
+      const block = blocksMap.get(block.id);
 
-};
 
-const drawStructuralUnits = (blocksMap, blockParamsMap, orgUnitArea, assignedStaffArea, parent, parentParams) => {
+    }
+  });
 
+
+  // сдвиг блоко структурных подразделений вниз
 };
 
 /**
@@ -186,7 +245,7 @@ const drawOrgUnits = (blocksMap, blockParamsMap, orgUnitArea, parent, parentPara
   let x = initX;
   let y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
 
-  const orgUnits = parent.children.filter((child) => child.otype === ORG_UNIT);
+  const orgUnits = parent.children.filter((child) => child.otype === ORG_UNIT && (!child.additionalInfo || child.additionalInfo === GOVERNANCE));
   const childrenCount = orgUnits.length;
 
   if ((parent.otype === POSITION) && (parent.level) === BLOCK_LEVELS.second && childrenCount > 1) {
@@ -239,13 +298,13 @@ const drawOrgUnits = (blocksMap, blockParamsMap, orgUnitArea, parent, parentPara
     const parentBlock = blocksMap.get(parent.id);
     // TODO тоже дичь
     parentBlock.style.left = `${parentParams.x + (childrenWidth - H_SPACE_BETWEEN_BLOCKS) / 2 - parentParams.width / 2 + LEVEL_WIDTH_STEP / 2}px`;
-    blockParamsMap.set(parent.id, getBlockParams(parentBlock));
+    blockParamsMap.set(parent.id, getBlockParams(parentBlock, parent));
     retHorizontalShift = childrenWidth;
   }
 
   // область под ШД
   // TODO продумать условие для определения именно ВТОРОГО уровня для ШД
-  if (parent.otype === POSITION && !!childrenCount) {
+  if (parent.otype === POSITION && childrenCount) {
     if (!childrenDrawnInline) {
       const leftChildBlock = blockParamsMap.get(orgUnits[0].id);
       orgUnitArea.x = leftChildBlock.x;
@@ -270,50 +329,61 @@ const drawOrgUnits = (blocksMap, blockParamsMap, orgUnitArea, parent, parentPara
 };
 
 /**
- * Отрисовка блоков с единицами управления
+ * Отрисовка блоков с приписным штатом
  * @param {Map} blocksMap
  * @param {Map} blockParamsMap
+ * @param {Object} orgUnitArea
+ * @param {Object} assignedStaffArea
  * @param {Object} parent
  * @param {Object} parentParams
+ * @return {Array}
  */
-const drawFirstRow = (blocksMap, blockParamsMap, parent, parentParams) => {
-  let maxHeight = MIN_BLOCK_HEIGHT;
-  let newHeight = MIN_BLOCK_HEIGHT;
+const drawAssignedStaff = (blocksMap, blockParamsMap, orgUnitArea, assignedStaffArea, parent, parentParams) => {
+  const assignedStaff = parent.children.filter((child) => child.otype === ORG_UNIT && child.additionalInfo === ASSIGNED_STAFF);
+  const childrenCount = assignedStaff.length;
 
   const width = parentParams.width - LEVEL_WIDTH_STEP;
   const height = MIN_BLOCK_HEIGHT;
-  let x = H_SPACE_BETWEEN_BLOCKS;
-  const y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
 
-  parent.children.forEach((child) => {
-    const childBlock = appendBlock(x, y, width, height, child, blocksMap, blockParamsMap);
-    const childHeight = parseInt(childBlock.children[0].clientHeight);
-    const borderWidth = parseInt(childBlock.children[0].style.borderWidth);
-
-    if (childHeight > maxHeight) {
-      maxHeight = childHeight;
-      newHeight = childHeight;
-    }
-
-    x += width + H_BLOCK_PADDING + borderWidth * 2 + H_SPACE_BETWEEN_BLOCKS;
-  });
-
-  if (maxHeight > height) {
-    maxHeight += IND_HEIGHT;
+  const initX = parentParams.x + LEVEL_WIDTH_STEP / 2 + parentParams.borderWidth + 5;
+  const x = initX;
+  let y;
+  if (!parent.additionalInfo || parent.additionalInfo === GOVERNANCE) {
+    y = orgUnitArea.y + orgUnitArea.height + V_SPACE_BETWEEN_BLOCKS;
   } else {
-    maxHeight = height;
+    y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
   }
 
-  // пересчет высоты блоков и добавление в глобальный map
-  parent.children.forEach((child) => {
-    const childBlock = blocksMap.get(child.id);
-    const indicatorBlockTop = newHeight + parseInt(childBlock.children[0].style.borderWidth, 10) * 2;
-    childBlock.style.height = maxHeight + 'px';
-    childBlock.children[0].style.height = newHeight + 'px';
-    childBlock.children[1].style.top = indicatorBlockTop + 'px';
-    blocksMap.set(child.id, childBlock);
-    blockParamsMap.set(child.id, getBlockParams(childBlock));
+  assignedStaff.forEach((child) => {
+    appendBlock(x, y, width, height, child, blocksMap, blockParamsMap);
+
+    // отрисовка потомков
+    const shift = drawAssignedStaff(blocksMap, blockParamsMap, orgUnitArea, assignedStaffArea, child, blockParamsMap.get(child.id));
+    const childBlockParams = blockParamsMap.get(child.id);
+    if (!shift[1]) {
+      y = childBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+    } else {
+      y = shift[1];
+    }
   });
+
+  if ((!parent.additionalInfo || parent.additionalInfo === GOVERNANCE) && childrenCount) {
+    const leftChildBlock = blockParamsMap.get(assignedStaff[0].id);
+    assignedStaffArea.x = leftChildBlock.x;
+    assignedStaffArea.y = leftChildBlock.y;
+    assignedStaffArea.width = leftChildBlock.width;
+    assignedStaffArea.height = y - orgUnitArea.y;
+  }
+
+  if (!childrenCount) {
+    y = 0;
+  }
+
+  return [0, y];
+};
+
+const drawStructuralUnits = (blocksMap, blockParamsMap, orgUnitArea, assignedStaffArea, parent, parentParams) => {
+
 };
 
 /**
@@ -372,7 +442,7 @@ const shiftOrgUnitsDown = (parent, blocksMap, blockParamsMap, shift) => {
     const childBlockParams = blockParamsMap.get(child.id);
 
     childBlock.style.top = `${childBlockParams.top.y + shift}px`;
-    blockParamsMap.set(child.id, getBlockParams(childBlock));
+    blockParamsMap.set(child.id, getBlockParams(childBlock, child));
     shiftOrgUnitsDown(child, blocksMap, blockParamsMap, shift);
   });
 };

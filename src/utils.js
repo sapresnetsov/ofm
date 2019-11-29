@@ -113,11 +113,12 @@ export const getPoint = (pX, pY) => {
 };
 
 /**
- * Получение фактических параметров HTML-блока
+ * Получение параметров HTML-блока и параметров отображения по смыслу в ОФМ
  * @param {Object} block
+ * @param {Object} ofmValue
  * @return {BlockParams}
  */
-export const getBlockParams = (block) => {
+export const getBlockParams = (block, ofmValue) => {
   const left = parseInt(block.style.left, 10);
   const top = parseInt(block.style.top, 10);
   const width = parseInt(block.style.width, 10);
@@ -136,6 +137,7 @@ export const getBlockParams = (block) => {
     bottom: getPoint(left + width / 2 + innerPaddingLeft, top + height + borderWidth * 2),
     left: getPoint(left, top + height / 2),
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
+    additionalInfo: ofmValue.additionalInfo,
   };
 };
 
