@@ -10,7 +10,7 @@ import {
 } from './constants';
 
 /**
- *
+ * Создания блока
  * @param {number} x
  * @param {number} y
  * @param {number} width
@@ -22,7 +22,7 @@ import {
  * @param {any[]} indicators
  * @return {HTMLElement}
  */
-export const createBlock = (x, y, width, height, blockType='default', blockLevel='default', title, functions, indicators, test) => {
+export const createBlock = (x, y, width, height, blockType='default', blockLevel='default', title, functions, indicators) => {
   const outerBlock = document.createElement(`div`);
   outerBlock.setAttribute(`class`, `outer_block`);
   outerBlock.style.left = `${x}px`;
@@ -32,9 +32,7 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
 
   const blockBorderWidth = BORDER_WIDTH[blockLevel];
   const blockBody = document.createElement(`div`);
-  if (test) {
-    blockBody.id = 'parent';
-  }
+
   blockBody.setAttribute(`class`, `inner_block ${blockLevel}`);
   blockBody.style.paddingLeft = blockBody.style.paddingRight = `${H_BLOCK_PADDING}px`;
   blockBody.style.borderWidth = `${blockBorderWidth}px`;
@@ -139,6 +137,34 @@ export const getBlockParams = (block) => {
     left: getPoint(left, top + height / 2),
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
   };
+};
+
+/**
+ * Добавление блока
+ * @param {number} x
+ * @param {number} y
+ * @param {number} width
+ * @param {number} height
+ * @param {Object} child
+ * @param {Map} blocksMap
+ * @param {Map} blockParamsMap
+ * @return {HTMLElement}
+ */
+export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMap) => {
+  const blockType = child.type || 'default';
+  const blockLevel = child.level || 'default';
+  const initialBlockParams = [x, y, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
+  const childBlock = createBlock(...initialBlockParams);
+  root.appendChild(childBlock);
+  // подбор высоты
+  const childHeight = childBlock.children[0].clientHeight;
+  const indicatorBlockTop = childHeight + BORDER_WIDTH[blockLevel] * 2;
+  // childBlock.style.height = childHeight + 'px';
+  childBlock.children[0].style.height = childHeight + 'px';
+  childBlock.children[1].style.top = indicatorBlockTop + 'px';
+  blocksMap.set(child.id, childBlock);
+  blockParamsMap.set(child.id, getBlockParams(childBlock));
+  return childBlock;
 };
 
 /**
