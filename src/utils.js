@@ -22,7 +22,7 @@ import {
  * @param {any[]} indicators
  * @return {HTMLElement}
  */
-export const createBlock = (x, y, width, height, blockType='default', blockLevel='default', title, functions, indicators) => {
+export const createBlock = (x, y, width, height, blockType='default', blockLevel='default', title, functions, indicators, test) => {
   const outerBlock = document.createElement(`div`);
   outerBlock.setAttribute(`class`, `outer_block`);
   outerBlock.style.left = `${x}px`;
@@ -32,6 +32,9 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
 
   const blockBorderWidth = BORDER_WIDTH[blockLevel];
   const blockBody = document.createElement(`div`);
+  if (test) {
+    blockBody.id = 'parent';
+  }
   blockBody.setAttribute(`class`, `inner_block ${blockLevel}`);
   blockBody.style.paddingLeft = blockBody.style.paddingRight = `${H_BLOCK_PADDING}px`;
   blockBody.style.borderWidth = `${blockBorderWidth}px`;

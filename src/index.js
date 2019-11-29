@@ -14,6 +14,9 @@ import {
   getDataFromDOM,
 } from './utils';
 import {struct} from './data';
+import html2canvas from 'html2canvas';
+import FileSaver from 'file-saver';
+import htmlToImage from 'html-to-image';
 
 const blocksMap = new Map();
 const blockParamsMap = new Map();
@@ -46,7 +49,8 @@ export const init = () => {
   const parentWidth = MIN_BLOCK_WIDTH + LEVEL_WIDTH_STEP * maxDepth;
   const x = screenWidth / 2 - parentWidth / 2;
   const y = 20;
-  const parentBlock = createBlock(x, y, parentWidth, MIN_BLOCK_HEIGHT, parent.type, parent.level, parent.title, parent.functions, parent.indicators);
+  const parentBlock = createBlock(x, y, parentWidth, MIN_BLOCK_HEIGHT, parent.type, parent.level, parent.title, parent.functions, parent.indicators, true);
+  // parentBlock.id = 'parent';
   root.appendChild(parentBlock);
 
   let newHeight = parentBlock.children[0].clientHeight;
@@ -126,6 +130,46 @@ export const init = () => {
   });
 
   saveBlockParamsMapToDOM();
+
+  // html2canvas(document.getElementById('parent')).then((canvas) => {
+  //   // console.log(canvas.toDataURL('image/jpeg'));
+  //   const blob = canvas.toBlob(function(blob) {
+  //     console.log(blob);
+  //   }, 'image/jpeg', 0.95);
+  //   // FileSaver.saveAs(blob, 'ofm');
+  // }
+  // );
+
+  html2canvas(document.getElementById('parent'))
+      .then(function(canvas) {
+        document.body.append(canvas);
+      }
+      );
+
+  // htmlToImage.toBlob(document.getElementById('root'))
+  //     .then(function(blob) {
+  //       FileSaver.saveAs(blob, 'ofm');
+  //       // console.log(blob);
+  //     })
+  //     .catch(function(error) {
+  //       console.error('oops, something went wrong!', error);
+  //     });
+
+  // const FormPress = document.createElement('form');
+  // FormPress.action = 'SAPEVENT:inner_html';
+  // FormPress.method = 'post';
+  // FormPress.id = 'FormPress';
+  //
+  // const myInput = document.createElement('input');
+  // myInput.type = 'hidden';
+  // myInput.name = 'myInput';
+  // myInput.id = 'myInput';
+  // myInput.value = 'myInput';
+  // myInput.readonly = 'readonly';
+  //
+  // FormPress.appendChild(myInput);
+  // document.body.appendChild(FormPress);
+  // FormPress.submit();
 };
 
 /**
@@ -172,7 +216,7 @@ const drawDeputy = (blocksMap, blockParamsMap, parent, parentParams) => {
   if (!positionsLength) {
     return {}; // TODO
   }
-
+  document.get;
   positions.forEach((child) => {
     if (child.otype !== POSITION) {
       return;

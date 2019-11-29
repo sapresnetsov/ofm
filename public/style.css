@@ -2,6 +2,11 @@ body {
     background-color: white;
     font-family: Calibri;
 }
+div{
+    position: absolute;
+    margin: 0;
+    padding: 0;
+}
 .a4_body_book {
     width: 21cm;
     height: 29.7cm;
@@ -12,23 +17,7 @@ body {
     height: 21cm;
     margin: 30mm 45mm 30mm 45mm;
 }
-h3.first_level {
-    font-size: 15pt;
-}
 
-.title_text {
-    margin-top: 5px;
-    margin-bottom: 5pt;
-}
-p.function_text {
-    margin: 0;
-    padding-bottom: 2pt;
-}
-div{
-    position: absolute;
-    margin: 0;
-    padding: 0;
-}
 div.outer_block {
     display: block;
 }
@@ -38,7 +27,18 @@ div.inner_block {
 
     margin: 0;
     border-color: black;
+    color: black;
     text-align: center;
+}
+
+.title_text {
+    margin-top: 5px;
+    margin-bottom: 5pt;
+}
+
+p.function_text {
+    margin: 0;
+    padding-bottom: 2pt;
 }
 
 div.firstLevel {
@@ -103,10 +103,10 @@ div.default {
     border-color: black;
 }
 .default h3 {
-
+    font-size: 9pt;
 }
 .default p {
-
+    font-size: 7pt;
 }
 
 div.indicator {
@@ -114,15 +114,16 @@ div.indicator {
     border-color: black;
     border-top: 0;
     background-color: lightyellow;
+    color: blue;
     font-size: 6pt;
     text-align: center;
 }
 
 .text_color_text {
-    color: black;
+
 }
 .text_color_indicator {
-    color: blue;
+
 }
 
 div.line {
