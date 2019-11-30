@@ -6,6 +6,7 @@ export const struct = [{
   'level': 'first',
   'otype': 'S',
   'type': 'leadership',
+  'additionalInfo': 'U',
   'children': [
     {
       'id': '20',
@@ -35,6 +36,7 @@ export const struct = [{
       'level': 'second',
       'otype': 'S',
       'type': 'deputy',
+      'additionalInfo': 'U',
       'children': [
         {
           'id': '30',
@@ -61,6 +63,7 @@ export const struct = [{
           'level': 'independent',
           'otype': 'O',
           'type': 'technical',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '40',
@@ -85,6 +88,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
           ],
@@ -114,6 +118,7 @@ export const struct = [{
           'level': 'independent',
           'otype': 'O',
           'type': 'technical',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '41',
@@ -136,6 +141,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
             {
@@ -161,6 +167,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
             {
@@ -186,6 +193,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
           ],
@@ -215,6 +223,7 @@ export const struct = [{
           'level': 'independent',
           'otype': 'O',
           'type': 'technical',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '44',
@@ -237,6 +246,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [
                 {
                   'id': '50',
@@ -258,6 +268,7 @@ export const struct = [{
                   'level': 'dependent',
                   'otype': 'O',
                   'type': 'default',
+                  'additionalInfo': 'U',
                   'children': [],
                 },
                 {
@@ -280,6 +291,7 @@ export const struct = [{
                   'level': 'dependent',
                   'otype': 'O',
                   'type': 'default',
+                  'additionalInfo': 'U',
                   'children': [],
                 },
               ],
@@ -307,6 +319,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
           ],
@@ -336,6 +349,7 @@ export const struct = [{
           'level': 'independent',
           'otype': 'O',
           'type': 'technical',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '4331',
@@ -358,6 +372,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [
                 {
                   'id': '5331',
@@ -379,6 +394,7 @@ export const struct = [{
                   'level': 'dependent',
                   'otype': 'O',
                   'type': 'default',
+                  'additionalInfo': 'U',
                   'children': [],
                 },
                 {
@@ -401,6 +417,7 @@ export const struct = [{
                   'level': 'dependent',
                   'otype': 'O',
                   'type': 'default',
+                  'additionalInfo': 'U',
                   'children': [],
                 },
               ],
@@ -428,6 +445,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [
                 {
                   'id': '5333',
@@ -449,6 +467,7 @@ export const struct = [{
                   'level': 'dependent',
                   'otype': 'O',
                   'type': 'default',
+                  'additionalInfo': 'U',
                   'children': [],
                 },
               ],
@@ -480,6 +499,7 @@ export const struct = [{
           'level': 'independent',
           'otype': 'O',
           'type': 'technical',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '432011',
@@ -502,6 +522,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [
                 {
                   'id': '532011',
@@ -523,6 +544,7 @@ export const struct = [{
                   'level': 'dependent',
                   'otype': 'O',
                   'type': 'default',
+                  'additionalInfo': 'U',
                   'children': [],
                 },
               ],
@@ -550,6 +572,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
           ],
@@ -579,6 +602,7 @@ export const struct = [{
           'level': 'independent',
           'otype': 'O',
           'type': 'technical',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '432021',
@@ -601,6 +625,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [
                 {
                   'id': '532021',
@@ -622,6 +647,7 @@ export const struct = [{
                   'level': 'dependent',
                   'otype': 'O',
                   'type': 'default',
+                  'additionalInfo': 'U',
                   'children': [],
                 },
               ],
@@ -649,6 +675,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
           ],
@@ -795,6 +822,34 @@ export const struct = [{
           'children': [],
         },
         {
+          'id': '3206',
+          'title': 'СП 1',
+          'functions': [
+            '1. Координация деятельности подразделений «РЖД» в проведении единой экономической и финансовой политики',
+            '2. Организация работы подразделений ОАО «РЖД» по разработке предложений и мер по обеспечению стабильного экономического положения и финансовой устойчивости подразделений ОАО «РЖД»',
+            '3. Организация соблюдения единой методологии бюджетного управления и управленческого учета подразделениями ОАО «РЖД»',
+            '4. Формирование, согласование и контроль исполнения бюджетов производства подразделений ОАО «РЖД»',
+            '5. Подготовка предложений о перераспределении бюджетов затрат подразделений ОАО «РЖД»',
+            '6. Проведение анализа параметров бюджетов подразделений ОАО «РЖД»',
+            '7. Консолидация и проведение анализа показателей производственно-экономической деятельности подразделений ОАО «РЖД»',
+            '8. Подготовка предложений по оптимизации расходов подразделений ОАО «РЖД»',
+          ],
+          'indicators': [
+            {'key': 'N', 'value': 8},
+            {'key': 'NRP', 'value': '25%'},
+            {'key': 'NUP', 'value': 3},
+            {'key': 'KZV', 'value': 4},
+            {'key': 'KZV_', 'value': 2},
+            {'key': 'NFP', 'value': 0},
+            {'key': 'NZMIN', 'value': 2},
+          ],
+          'level': 'independent',
+          'otype': 'O',
+          'type': 'manufacturing',
+          'additionalInfo': 'S',
+          'children': [],
+        },
+        {
           'id': '35',
           'title': 'Заместитель главного инженера железной дороги',
           'functions': [
@@ -809,6 +864,7 @@ export const struct = [{
           'level': 'second',
           'otype': 'S',
           'type': 'deputy',
+          'additionalInfo': 'U',
           'children': [],
         },
 
@@ -840,6 +896,7 @@ export const struct = [{
       'level': 'second',
       'otype': 'S',
       'type': 'deputy',
+      'additionalInfo': 'U',
       'children': [
         {
           'id': '3211',
@@ -896,6 +953,7 @@ export const struct = [{
       'level': 'second',
       'otype': 'S',
       'type': 'deputy',
+      'additionalInfo': 'U',
       'children': [
         {
           'id': '36',
@@ -921,6 +979,7 @@ export const struct = [{
           'level': 'independent',
           'otype': 'O',
           'type': 'technical',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '46',
@@ -943,6 +1002,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'technical',
+              'additionalInfo': 'U',
               'children': [],
             },
             {
@@ -968,6 +1028,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'technical',
+              'additionalInfo': 'U',
               'children': [],
             },
             {
@@ -993,6 +1054,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'technical',
+              'additionalInfo': 'U',
               'children': [],
             },
           ],
@@ -1059,7 +1121,37 @@ export const struct = [{
       'level': 'second',
       'otype': 'S',
       'type': 'deputy',
-      'children': [],
+      'additionalInfo': 'U',
+      'children': [
+        {
+          'id': '3231',
+          'title': 'СП 1',
+          'functions': [
+            '1. Координация деятельности подразделений «РЖД» в проведении единой экономической и финансовой политики',
+            '2. Организация работы подразделений ОАО «РЖД» по разработке предложений и мер по обеспечению стабильного экономического положения и финансовой устойчивости подразделений ОАО «РЖД»',
+            '3. Организация соблюдения единой методологии бюджетного управления и управленческого учета подразделениями ОАО «РЖД»',
+            '4. Формирование, согласование и контроль исполнения бюджетов производства подразделений ОАО «РЖД»',
+            '5. Подготовка предложений о перераспределении бюджетов затрат подразделений ОАО «РЖД»',
+            '6. Проведение анализа параметров бюджетов подразделений ОАО «РЖД»',
+            '7. Консолидация и проведение анализа показателей производственно-экономической деятельности подразделений ОАО «РЖД»',
+            '8. Подготовка предложений по оптимизации расходов подразделений ОАО «РЖД»',
+          ],
+          'indicators': [
+            {'key': 'N', 'value': 8},
+            {'key': 'NRP', 'value': '25%'},
+            {'key': 'NUP', 'value': 3},
+            {'key': 'KZV', 'value': 4},
+            {'key': 'KZV_', 'value': 2},
+            {'key': 'NFP', 'value': 0},
+            {'key': 'NZMIN', 'value': 2},
+          ],
+          'level': 'independent',
+          'otype': 'O',
+          'type': 'economy',
+          'additionalInfo': 'S',
+          'children': [],
+        },
+      ],
     },
     {
       'id': '24',
@@ -1090,6 +1182,7 @@ export const struct = [{
       'level': 'second',
       'otype': 'S',
       'type': 'deputy',
+      'additionalInfo': 'U',
       'children': [
         {
           'id': '37',
@@ -1112,6 +1205,7 @@ export const struct = [{
           'level': 'dependent',
           'otype': 'O',
           'type': 'default',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '49',
@@ -1136,6 +1230,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
           ],
@@ -1163,6 +1258,7 @@ export const struct = [{
           'level': 'dependent',
           'otype': 'O',
           'type': 'technical',
+          'additionalInfo': 'U',
           'children': [
             {
               'id': '410',
@@ -1187,6 +1283,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
             {
@@ -1212,6 +1309,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
             {
@@ -1237,6 +1335,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
             {
@@ -1262,6 +1361,7 @@ export const struct = [{
               'level': 'dependent',
               'otype': 'O',
               'type': 'default',
+              'additionalInfo': 'U',
               'children': [],
             },
           ],
@@ -1324,6 +1424,7 @@ export const struct = [{
       'level': 'second',
       'otype': 'S',
       'type': 'deputy',
+      'additionalInfo': 'U',
       'children': [
         {
           'id': '3251',
@@ -1351,6 +1452,34 @@ export const struct = [{
           'otype': 'O',
           'type': 'manufacturing',
           'additionalInfo': 'X',
+          'children': [],
+        },
+        {
+          'id': '3252',
+          'title': 'СП 1',
+          'functions': [
+            '1. Координация деятельности подразделений «РЖД» в проведении единой экономической и финансовой политики',
+            '2. Организация работы подразделений ОАО «РЖД» по разработке предложений и мер по обеспечению стабильного экономического положения и финансовой устойчивости подразделений ОАО «РЖД»',
+            '3. Организация соблюдения единой методологии бюджетного управления и управленческого учета подразделениями ОАО «РЖД»',
+            '4. Формирование, согласование и контроль исполнения бюджетов производства подразделений ОАО «РЖД»',
+            '5. Подготовка предложений о перераспределении бюджетов затрат подразделений ОАО «РЖД»',
+            '6. Проведение анализа параметров бюджетов подразделений ОАО «РЖД»',
+            '7. Консолидация и проведение анализа показателей производственно-экономической деятельности подразделений ОАО «РЖД»',
+            '8. Подготовка предложений по оптимизации расходов подразделений ОАО «РЖД»',
+          ],
+          'indicators': [
+            {'key': 'N', 'value': 8},
+            {'key': 'NRP', 'value': '25%'},
+            {'key': 'NUP', 'value': 3},
+            {'key': 'KZV', 'value': 4},
+            {'key': 'KZV_', 'value': 2},
+            {'key': 'NFP', 'value': 0},
+            {'key': 'NZMIN', 'value': 2},
+          ],
+          'level': 'independent',
+          'otype': 'O',
+          'type': 'economy',
+          'additionalInfo': 'S',
           'children': [],
         },
       ],
@@ -1381,6 +1510,7 @@ export const struct = [{
       'level': 'second',
       'otype': 'S',
       'type': 'deputy',
+      'additionalInfo': 'U',
       'children': [],
     },
     {
@@ -1413,6 +1543,7 @@ export const struct = [{
       'level': 'second',
       'otype': 'S',
       'type': 'deputy',
+      'additionalInfo': 'U',
       'children': [
         {
           'id': '39',
@@ -1439,6 +1570,7 @@ export const struct = [{
           'level': 'second',
           'otype': 'S',
           'type': 'deputy',
+          'additionalInfo': 'U',
           'children': [],
         },
       ],

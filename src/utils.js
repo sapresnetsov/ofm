@@ -18,7 +18,7 @@ import {
  * @param {string} blockType
  * @param {string} blockLevel
  * @param {string} title
- * @param {any[]} functions
+ * @param {String[]} functions
  * @param {any[]} indicators
  * @return {HTMLElement}
  */
@@ -165,7 +165,7 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
   childBlock.children[0].style.height = childHeight + 'px';
   childBlock.children[1].style.top = indicatorBlockTop + 'px';
   blocksMap.set(child.id, childBlock);
-  blockParamsMap.set(child.id, getBlockParams(childBlock));
+  blockParamsMap.set(child.id, getBlockParams(childBlock, child));
   return childBlock;
 };
 
@@ -239,12 +239,14 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
   const toPoint = getPointOfSide(blockTo, toSide);
 
   const stdNodeShift = 15;
-  // точки соединения находятся на одной вертикали
   if (fromSide === BOTTOM && toSide === TOP) {
-    if (fromPoint.x === (toPoint.x)) {
+    // точки соединения находятся на одной вертикали
+    if (Math.abs(fromPoint.x - toPoint.x) < 5 && (!orgUnitArea || orgUnitArea.width === 0)) {
+      toPoint.x += (fromPoint.x - toPoint.x);
       createLine(root, fromPoint, toPoint, 'vertical_line');
       return;
     }
+    // точки соединения смещены относительно друг-друга
     if (!orgUnitArea) {
       // ломаная линия из трех звеньев
       const yMiddle = toPoint.y - stdNodeShift;
