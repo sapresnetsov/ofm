@@ -37,7 +37,8 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
   blockBody.style.paddingLeft = blockBody.style.paddingRight = `${H_BLOCK_PADDING}px`;
   blockBody.style.borderWidth = `${blockBorderWidth}px`;
   blockBody.style.backgroundColor = `${BACKGROUND_COLOR[blockType]}`;
-  // Заголовок блока
+
+ // Заголовок блока
   const blockTitle = document.createElement(`h3`);
   blockTitle.setAttribute(`class`, `title_text text_color_text`);
   blockTitle.textContent = title;
@@ -85,6 +86,9 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
       indicator.style.width = `${indicatorWidth}px`;
       indicator.style.height = `${IND_HEIGHT}px`;
       indicator.style.borderWidth = `${indBorderWidth}px`;
+      indicator.style.backgroundColor = 'lightyellow';
+      indicator.style.color = 'blue';
+      indicator.style.fontSize = '6pt';
       indicator.innerHTML = `<p style="margin: 0">${ind.key} ${ind.value}</p>`;
       if (i !== 0) {
         indicator.style.borderRight = `0`;
@@ -127,17 +131,37 @@ export const getBlockParams = (block, ofmValue) => {
   const borderWidth = parseInt(block.children[0].style.borderWidth, 10);
   const innerPaddingLeft = parseInt(block.children[0].style.paddingLeft, 10);
   const innerPaddingRight = parseInt(block.children[0].style.paddingRight, 10);
+  const innerBlockStyle = window.getComputedStyle(block.children[0]);
+  // const indicatorsBlockStyle = window.getComputedStyle(block.children[1]);
+  let indicators;
+  if (block.children[1].children && block.children[1].children.length > 0) {
+    indicators = [...block.children[1].children].map((ind) => {
+      return {
+        x: parseInt(ind.style.left, 10),
+        y: parseInt(ind.style.top, 10),
+        width: parseInt(ind.style.width, 10),
+        height: parseInt(ind.style.height, 10),
+        borderWidth: 1,
+        backgroundColor: ind.style.backgroundColor,
+        text: ind.innerText,
+        font: `${ind.style.fontSize} Calibri`,
+      };
+    });
+  }
   return {
     x: left,
     y: top,
     width: width,
     height: height,
     borderWidth: borderWidth,
+    borderStyle: innerBlockStyle.borderStyle,
     top: getPoint(left + width / 2, top),
     bottom: getPoint(left + width / 2 + innerPaddingLeft, top + height + borderWidth * 2),
     left: getPoint(left, top + height / 2),
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
     additionalInfo: ofmValue.additionalInfo,
+    backgroundColor: innerBlockStyle.backgroundColor,
+    indicators: indicators,
   };
 };
 
@@ -287,6 +311,11 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
   }
 
   if (fromSide === RIGHT && toSide === LEFT) {
+    if (Math.abs(fromPoint.y - toPoint.y) < 15) {
+      toPoint.y += (fromPoint.y - toPoint.y);
+      createLine(root, fromPoint, toPoint, 'horizontal_line');
+      return;
+    }
     // блок снизу и правее
     if (toPoint.x >= fromPoint.x ) {
       const parMidPoint = getPoint(toPoint.x - stdNodeShift, fromPoint.y);
@@ -298,6 +327,12 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
   }
 };
 
+/**
+ *
+ * @param {Object} blockParams
+ * @param {string} side
+ * @return {*}
+ */
 const getPointOfSide = (blockParams, side) => {
   let point;
   switch (side) {
@@ -315,4 +350,19 @@ const getPointOfSide = (blockParams, side) => {
       break;
   }
   return point;
+};
+
+/**
+ * Получение общей высоты схемы
+ * @param {Map} areasMap
+ * @return {number} height
+ */
+export const getFullHeight = (areasMap) => {
+  let fullHeight = 0;
+  areasMap.forEach((area) => {
+    if (area.y + area.height > fullHeight) {
+      fullHeight = area.y + area.height;
+    }
+  });
+  return fullHeight;
 };
