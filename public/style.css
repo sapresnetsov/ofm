@@ -32,8 +32,9 @@ div.inner_block {
 }
 
 .title_text {
-    margin-top: 5px;
-    margin-bottom: 5pt;
+    padding-top: 5px;
+    padding-bottom: 5pt;
+
 }
 
 p.function_text {

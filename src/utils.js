@@ -1,5 +1,4 @@
 /* eslint-disable indent */
-// отрисовка орг. блока
 import {
   BACKGROUND_COLOR,
   BORDER_WIDTH, BOTTOM,
@@ -111,8 +110,8 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
  */
 export const getPoint = (pX, pY) => {
   return {
-    x: pX,
-    y: pY,
+    x: Math.floor(pX),
+    y: Math.floor(pY),
   };
 };
 
@@ -133,7 +132,38 @@ export const getBlockParams = (block, ofmValue) => {
   const innerPaddingRight = parseInt(block.children[0].style.paddingRight, 10);
   const innerBlockStyle = window.getComputedStyle(block.children[0]);
   // const indicatorsBlockStyle = window.getComputedStyle(block.children[1]);
-  let indicators;
+  // заголовок
+  const titleTag = block.children[0].children[0];
+  const titleStyle = window.getComputedStyle(titleTag);
+  const titleHeight = 19;
+  const title = {
+    font: `bold ${titleStyle.fontSize} Calibri`,
+    text: titleTag.innerText,
+    height: titleHeight,
+    paddingTop: parseInt(titleStyle.paddingTop, 10),
+    paddingBottom: parseInt(titleStyle.paddingBottom, 10),
+    paddingLeft: parseInt(titleStyle.paddingLeft, 10),
+    paddingRight: parseInt(titleStyle.paddingRight, 10),
+  };
+  // функции
+  let functions = [];
+  if (block.children[0].children.length > 1) {
+    const funcArr = [...block.children[0].children];
+    const funcStyle = window.getComputedStyle(block.children[0].children[1]);
+    let funcHeight = parseInt(funcStyle.height, 10);
+    funcHeight = funcHeight / Math.ceil(funcHeight / parseInt(funcStyle.fontSize, 10));
+    functions = funcArr.slice(1, funcArr.length).map((func) => {
+      return {
+        font: `${funcStyle.fontSize} ${funcStyle.fontFamily}`,
+        text: func.innerText,
+        height: funcHeight,
+        paddingTop: parseInt(funcStyle.paddingTop, 10),
+        paddingBottom: parseInt(funcStyle.paddingBottom, 10),
+      };
+    });
+  }
+  // Индикаторы
+  let indicators = [];
   if (block.children[1].children && block.children[1].children.length > 0) {
     indicators = [...block.children[1].children].map((ind) => {
       return {
@@ -153,6 +183,8 @@ export const getBlockParams = (block, ofmValue) => {
     y: top,
     width: width,
     height: height,
+    innerPaddingLeft: innerPaddingLeft,
+    innerPaddingRight: innerPaddingRight,
     borderWidth: borderWidth,
     borderStyle: innerBlockStyle.borderStyle,
     top: getPoint(left + width / 2, top),
@@ -161,6 +193,9 @@ export const getBlockParams = (block, ofmValue) => {
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
     additionalInfo: ofmValue.additionalInfo,
     backgroundColor: innerBlockStyle.backgroundColor,
+    id: ofmValue.id,
+    title: title,
+    functions: functions,
     indicators: indicators,
   };
 };
@@ -194,14 +229,40 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
 };
 
 /**
- * Получение данных через index.html
- * @return {{maxDepth: string, ofmDataStr: string}}
+ * Получение данных через DOM
+ * @return {{
+ *  maxDepth: string,
+ *  ofmDataStr: string,
+ *  maxDepth: string,
+ *  drawSeparators: string,
+ *  saveToDom: string,
+ *  toImage: string,
+ *  toPdf: string
+ *  }}
  */
 export const getDataFromDOM = () => {
-  const ofmDataStr = document.getElementById('ofmData').textContent;
-  const maxDepth = document.getElementById('maxDepth').textContent;
+  const ofmDataStr = getDomValue('ofmData');
+  const ofmTitle = getDomValue('ofmTitle');
+  const maxDepth = getDomValue('maxDepth');
+  const drawSeparators = getDomValue('drawSeparators');
+  const saveToDom = getDomValue('saveToDom');
+  const toImage = getDomValue('toImage');
+  const toPdf = getDomValue('toPdf');
 
-  return {ofmDataStr, maxDepth};
+  return {ofmDataStr, ofmTitle, maxDepth, drawSeparators, saveToDom, toImage, toPdf};
+};
+
+/**
+ * Получение значения элемента DOM
+ * @param {string} id
+ * @return {string}
+ */
+const getDomValue = (id) => {
+  if (document.getElementById(id)) {
+    return document.getElementById(id).textContent.trim();
+  } else {
+    return '';
+  }
 };
 
 /**
@@ -261,6 +322,7 @@ export const createLine = (root, startPoint, endPoint, lineType) => {
 export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom, blockTo, fromSide, toSide) => {
   const fromPoint = getPointOfSide(blockFrom, fromSide);
   const toPoint = getPointOfSide(blockTo, toSide);
+  const key = blockFrom.id + '/' + blockTo.id;
 
   const stdNodeShift = 15;
   if (fromSide === BOTTOM && toSide === TOP) {
@@ -268,6 +330,10 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     if (Math.abs(fromPoint.x - toPoint.x) < 5 && (!orgUnitArea || orgUnitArea.width === 0)) {
       toPoint.x += (fromPoint.x - toPoint.x);
       createLine(root, fromPoint, toPoint, 'vertical_line');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...toPoint},
+        ]);
       return;
     }
     // точки соединения смещены относительно друг-друга
@@ -279,17 +345,30 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
       createLine(root, fromPoint, parMidPoint, 'vertical_line');
       createLine(root, parMidPoint, childMidPoint, 'horizontal_line');
       createLine(root, childMidPoint, toPoint, 'vertical_line');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...parMidPoint},
+        {...childMidPoint},
+        {...toPoint},
+        ]);
     } else {
       const topAreaPoint = getPoint(fromPoint.x, orgUnitArea.y - stdNodeShift);
       const topLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, orgUnitArea.y - stdNodeShift);
       const bottomLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, toPoint.y - stdNodeShift);
       const bottomAreaPoint = getPoint(toPoint.x, toPoint.y - stdNodeShift);
-
       createLine(root, fromPoint, topAreaPoint, 'vertical_line');
       createLine(root, topAreaPoint, topLeftAreaPoint, 'horizontal_line');
       createLine(root, topLeftAreaPoint, bottomLeftAreaPoint, 'vertical_line');
       createLine(root, bottomLeftAreaPoint, bottomAreaPoint, 'horizontal_line');
       createLine(root, bottomAreaPoint, toPoint, 'vertical_line');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...topAreaPoint},
+        {...topLeftAreaPoint},
+        {...bottomLeftAreaPoint},
+        {...bottomAreaPoint},
+        {...toPoint},
+        ]);
     }
   }
 
@@ -300,13 +379,17 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
   if (fromSide === LEFT && toSide === LEFT) {
     // блок снизу и правее
     if (toPoint.x >= fromPoint.x ) {
-      const yDiff = Math.abs(fromPoint.y - toPoint.y);
       const parMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y);
-      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y + yDiff);
-
+      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, toPoint.y);
       createLine(root, fromPoint, parMidPoint, 'horizontal_line');
       createLine(root, parMidPoint, childMidPoint, 'vertical_line');
       createLine(root, childMidPoint, toPoint, 'horizontal_line');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...parMidPoint},
+        {...childMidPoint},
+        {...toPoint},
+        ]);
     }
   }
 
@@ -314,6 +397,10 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     if (Math.abs(fromPoint.y - toPoint.y) < 15) {
       toPoint.y += (fromPoint.y - toPoint.y);
       createLine(root, fromPoint, toPoint, 'horizontal_line');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...toPoint},
+        ]);
       return;
     }
     // блок снизу и правее
@@ -323,6 +410,12 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
       createLine(root, fromPoint, parMidPoint, 'horizontal_line');
       createLine(root, parMidPoint, childMidPoint, 'vertical_line');
       createLine(root, childMidPoint, toPoint, 'horizontal_line');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...parMidPoint},
+        {...childMidPoint},
+        {...toPoint},
+        ]);
     }
   }
 };

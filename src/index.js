@@ -12,21 +12,28 @@ import {IND_HEIGHT} from './constants';
 import {
   appendBlock,
   createUpsideDownConnector,
-  getBlockParams, getFullHeight,
+  getBlockParams, getDataFromDOM, getFullHeight,
 } from './utils';
 import {struct} from './data';
-import html2canvas from 'html2canvas';
+import FileSaver from 'file-saver';
+import 'canvas-toBlob';
 
 // Инициализация отрисовки схемы
-export const drawScheme = (ofmDataStr, maxDepth, toImage) => {
+export const drawScheme = () => {
   const blocksMap = new Map();
   const blockParamsMap = new Map();
   const linesMap = new Map();
   const orgUnitAreasMap = new Map();
   const assignedStaffAreasMap = new Map();
-  const structuralUnitsAreasMap = new Map();
+  const structuralUnitAreasMap = new Map();
 
   const root = document.getElementById('root');
+
+  let {ofmDataStr, ofmTitle, maxDepth, drawSeparators, saveToDom, toImage, toPdf} = getDataFromDOM();
+
+  if (! maxDepth) {
+    maxDepth = 1;
+  }
 
   let parent;
   if (ofmDataStr) {
@@ -37,27 +44,38 @@ export const drawScheme = (ofmDataStr, maxDepth, toImage) => {
   }
 
   const parentWidth = MIN_BLOCK_WIDTH + LEVEL_WIDTH_STEP * maxDepth;
-  const parentBlock = appendBlock(0, 20, parentWidth, MIN_BLOCK_HEIGHT, parent, blocksMap, blockParamsMap);
+  const parY = 20;
+  const parentBlock = appendBlock(0, parY, parentWidth, MIN_BLOCK_HEIGHT, parent, blocksMap, blockParamsMap);
 
   // отрисовка первого уровня
   let parentBlockParams = blockParamsMap.get(parent.id);
   drawFirstRow(blocksMap, blockParamsMap, parent, parentBlockParams);
 
   // отрисовка вертикально-расположенных блоков
-  drawColumns(blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, structuralUnitsAreasMap, parent);
+  drawColumns(blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, structuralUnitAreasMap, parent);
 
   // общая ширина схемы определяется по правой точке последнего блока
-  const childBlockParams = blockParamsMap.get(parent.children[parent.children.length - 1].id);
-  const fullWidth = childBlockParams.right.x;
-
-  // общая высота схемы определяется по нижней точке областей отрисовки (ОЕ, приписной штат, СП)
+  let child;
+  let fullWidth;
   let fullHeight;
-  if (structuralUnitsAreasMap.length) {
-    fullHeight = getFullHeight(structuralUnitsAreasMap);
-  } else if (assignedStaffAreasMap.length) {
-    fullHeight = getFullHeight(assignedStaffAreasMap);
+  if (!parent.children.length) {
+    fullHeight = parentBlockParams.bottom + IND_HEIGHT;
+    fullWidth = screen.width;
   } else {
-    fullHeight = getFullHeight(orgUnitAreasMap);
+    child = parent.children[parent.children.length - 1];
+    const childBlockParams = blockParamsMap.get(child.id);
+    fullWidth = childBlockParams.right.x;
+
+    // общая высота схемы определяется по нижней точке областей отрисовки (ОЕ, приписной штат, СП)
+    if (structuralUnitAreasMap.size) {
+      fullHeight = getFullHeight(structuralUnitAreasMap);
+    } else if (assignedStaffAreasMap.size) {
+      fullHeight = getFullHeight(assignedStaffAreasMap);
+    } else if (orgUnitAreasMap.size) {
+      fullHeight = getFullHeight(orgUnitAreasMap);
+    } else {
+      fullHeight = getFullHeight(blockParamsMap) + IND_HEIGHT + parY;
+    }
   }
 
   // итоговое выравнивание корневого элемента по общей ширине схемы
@@ -72,13 +90,23 @@ export const drawScheme = (ofmDataStr, maxDepth, toImage) => {
     drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, child);
   });
 
+  // отрисовка разеделителей областей с приписным штатом/ структурными подразделениями
+  if (drawSeparators) {
+
+  }
+
   // сохранение разметки
-  saveBlockParamsMapToDOM();
+  if (saveToDom) {
+    saveBlockParamsMapToDOM();
+  }
 
   // формирование канвы для получения изображения
   if (toImage) {
-    root.style.visibility = 'hidden';
-    translateHTMLToCanvasToImage(document.body, fullWidth, fullHeight, blocksMap, blockParamsMap, );
+    translateHTMLToCanvasToImage(document.body, ofmTitle, fullWidth, fullHeight, blocksMap, blockParamsMap, linesMap);
+  }
+
+  if (toPdf) {
+
   }
 };
 
@@ -135,12 +163,13 @@ const drawFirstRow = (blocksMap, blockParamsMap, parent, parentParams) => {
  * @param {Map} blockParamsMap
  * @param {Map} orgUnitAreasMap
  * @param {Map} assignedStaffAreasMap
- * @param {Map} structuralUnitsAreasMap
+ * @param {Map} structuralUnitAreasMap
  * @param {Object} parent
  */
-const drawColumns = (blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, structuralUnitsAreasMap, parent) => {
+const drawColumns = (blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, structuralUnitAreasMap, parent) => {
   // TODO необходимо нормально обозвать переменные
   let nextShift = 0;
+  let lastRightPoint = 0;
   let shiftsCount = 0;
   let maxAssignedStaffVerticalShift = 0;
   let maxStructuralUnitsVerticalShift = 0;
@@ -151,13 +180,16 @@ const drawColumns = (blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAr
       const childBlockParams = blockParamsMap.get(child.id);
       childBlock.style.left = `${childBlockParams.x + nextShift - childBlockParams.width * shiftsCount}px`;
       blockParamsMap.set(child.id, getBlockParams(childBlock, child));
+      lastRightPoint = 0;
     }
     let childBlockParams = blockParamsMap.get(child.id);
 
     // отрисовка блоков орг. единиц
     const orgUnitArea = {};
     const shift = drawOrgUnits(blocksMap, blockParamsMap, orgUnitArea, child, childBlockParams);
-    orgUnitAreasMap.set(child.id, orgUnitArea);
+    if (Object.entries(orgUnitArea).length && orgUnitArea.height) {
+      orgUnitAreasMap.set(child.id, orgUnitArea);
+    }
 
     // отрисовка блоков с приписным штатом
     const orgUnitAreaBottom = orgUnitArea.y + orgUnitArea.height;
@@ -166,7 +198,9 @@ const drawColumns = (blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAr
     }
     const assignedStaffArea = {};
     drawOtherUnits(blocksMap, blockParamsMap, orgUnitArea, assignedStaffArea, child, childBlockParams, ASSIGNED_STAFF);
-    assignedStaffAreasMap.set(child.id, assignedStaffArea);
+    if (Object.entries(assignedStaffArea).length && assignedStaffArea.height) {
+      assignedStaffAreasMap.set(child.id, assignedStaffArea);
+    }
 
     // отрисовка блоков со структурными подразделениями
     let prevAreaBottom;
@@ -179,12 +213,13 @@ const drawColumns = (blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAr
       maxStructuralUnitsVerticalShift = prevAreaBottom;
     }
     const prevArea = assignedStaffArea.width ? assignedStaffArea : orgUnitArea;
-    const structuralUnitsArea = {};
-    drawOtherUnits(blocksMap, blockParamsMap, prevArea, structuralUnitsArea, child, childBlockParams, STRUCTURAL_UNIT);
-    structuralUnitsAreasMap.set(child.id, structuralUnitsArea);
+    const structuralUnitArea = {};
+    drawOtherUnits(blocksMap, blockParamsMap, prevArea, structuralUnitArea, child, childBlockParams, STRUCTURAL_UNIT);
+    if (Object.entries(structuralUnitArea).length && structuralUnitArea.height) {
+      structuralUnitAreasMap.set(child.id, structuralUnitArea);
+    }
 
     // если есть заместители у ШД (S -> S), то отрисовываются их блоки
-    let lastRightPoint;
     if (child.otype === POSITION) {
       childBlockParams = blockParamsMap.get(child.id);
       const {deputyVerticalShift, deputyRightPoint} = drawDeputy(blocksMap, blockParamsMap, child, childBlockParams);
@@ -195,8 +230,21 @@ const drawColumns = (blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAr
         shiftOrgUnitsDown(child, blocksMap, blockParamsMap, deputyVerticalShift);
       }
     }
-    if (shift[0]) {
-      nextShift += shift[0];
+    // сдвиг следующих блоков определяется блоками сдочерними ОЕ, либо блоками с заместителями
+    if (shift[0] || lastRightPoint) {
+      let deputyShift;
+      if (Object.entries(orgUnitArea).length) {
+        deputyShift = lastRightPoint - orgUnitArea.x;
+      } else {
+        childBlockParams = blockParamsMap.get(child.id);
+        deputyShift = lastRightPoint - lastRightPoint - childBlockParams.left.x;
+      }
+
+      if (deputyShift > shift[0]) {
+        nextShift += deputyShift;
+      } else {
+        nextShift += shift[0];
+      }
       shiftsCount++;
     }
   });
@@ -340,19 +388,15 @@ const drawOrgUnits = (blocksMap, blockParamsMap, orgUnitArea, parent, parentPara
   // область под ШД
   // TODO продумать условие для определения именно ВТОРОГО уровня для ШД
   if (parent.otype === POSITION && childrenCount) {
+    const leftChildBlock = blockParamsMap.get(orgUnits[0].id);
+    orgUnitArea.x = leftChildBlock.x;
+    orgUnitArea.y = leftChildBlock.y;
+    orgUnitArea.height = y - orgUnitArea.y + IND_HEIGHT;
     if (!childrenDrawnInline) {
-      const leftChildBlock = blockParamsMap.get(orgUnits[0].id);
-      orgUnitArea.x = leftChildBlock.x;
-      orgUnitArea.y = leftChildBlock.y;
       orgUnitArea.width = leftChildBlock.width;
-      orgUnitArea.height = y - orgUnitArea.y;
     } else {
-      const leftChildBlock = blockParamsMap.get(orgUnits[0].id);
       const rightChildBlock = blockParamsMap.get(orgUnits[childrenInlineCount - 1].id);
-      orgUnitArea.x = leftChildBlock.x;
-      orgUnitArea.y = leftChildBlock.y;
       orgUnitArea.width = rightChildBlock.right.x - orgUnitArea.x;
-      orgUnitArea.height = y - orgUnitArea.y;
     }
   }
 
@@ -380,25 +424,25 @@ const drawOtherUnits = (blocksMap, blockParamsMap, prevArea, unitsArea, parent, 
   const width = parentParams.width - LEVEL_WIDTH_STEP;
   const height = MIN_BLOCK_HEIGHT;
 
+  // TODO оставил для последующей модификации по вывод приписного штата и сп в несколько колонок
   const initX = parentParams.x + LEVEL_WIDTH_STEP / 2 + parentParams.borderWidth + 5;
   const x = initX;
   let y;
   if (!parent.additionalInfo || parent.additionalInfo === GOVERNANCE) {
-    y = prevArea.y + prevArea.height + V_SPACE_BETWEEN_BLOCKS;
+    y = prevArea.y + prevArea.height;
   } else {
     y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
   }
 
   units.forEach((child) => {
     appendBlock(x, y, width, height, child, blocksMap, blockParamsMap);
-
     // отрисовка потомков
     const shift = drawOtherUnits(blocksMap, blockParamsMap, prevArea, unitsArea, child, blockParamsMap.get(child.id), additionalInfo);
     const childBlockParams = blockParamsMap.get(child.id);
-    if (!shift[1]) {
-      y = childBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
-    } else {
+    if (shift[1]) {
       y = shift[1];
+    } else {
+      y = childBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
     }
   });
 
@@ -471,7 +515,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitAreasMap, assignedStaff
 
   const structuralUnits = parent.children.filter((child) => child.additionalInfo === STRUCTURAL_UNIT);
   if (parent.otype === POSITION) {
-    if (assignedStaffArea.width && !orgUnitArea.width) {
+    if (assignedStaffArea && assignedStaffArea.width && (!orgUnitArea || !orgUnitArea.width)) {
       tempOrgUnit = {...assignedStaffArea};
     } else if (orgUnitArea) {
       tempOrgUnit = {...orgUnitArea};
@@ -503,6 +547,13 @@ const shiftOrgUnitsDown = (parent, blocksMap, blockParamsMap, shift) => {
   });
 };
 
+/**
+ *
+ * @param {Map} blocksMap
+ * @param {Map} blockParamsMap
+ * @param {string} additionalInfo
+ * @param {number} verticalShift
+ */
 const shiftOtherUnitsDown = (blocksMap, blockParamsMap, additionalInfo, verticalShift) => {
   blockParamsMap.forEach((blockParams, key) => {
     if (blockParams.additionalInfo === additionalInfo) {
@@ -522,27 +573,43 @@ const saveBlockParamsMapToDOM = () => {
 
 /**
  * Перевод HTML на канву
- * @param root
- * @param width
- * @param height
- * @param blocksMap
- * @param blockParamsMap
- * @param linesMap
+ * @param {HTMLElement} root
+ * @param {string} ofmTitle
+ * @param {number} width
+ * @param {number} height
+ * @param {Map} blocksMap
+ * @param {Map} blockParamsMap
+ * @param {Map} linesMap
  */
-const translateHTMLToCanvasToImage = (root, width, height, blocksMap, blockParamsMap, linesMap) => {
+const translateHTMLToCanvasToImage = (root, ofmTitle, width, height, blocksMap, blockParamsMap, linesMap) => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
 
   root.appendChild(canvas);
+  canvas.setAttribute('visibility', 'hidden');
 
   const ctx = canvas.getContext('2d');
-  blockParamsMap.forEach((blockParams, key) => {
-    const block = blocksMap.get(key);
+  if (blockParamsMap) {
+    blockParamsMap.forEach((blockParams) => {
+      const {x, y, width, height, innerPaddingLeft, innerPaddingRight, borderWidth, borderStyle, backgroundColor, title, functions, indicators} = blockParams;
+      canvasDrawRect(ctx, x, y, width, height, innerPaddingLeft, innerPaddingRight, borderWidth, borderStyle, backgroundColor, title, functions, indicators);
+    });
+  }
 
-    const {x, y, width, height, borderWidth, borderStyle, backgroundColor, indicators} = blockParams;
-    canvasDrawRect(ctx, x, y, width, height, borderWidth, borderStyle, backgroundColor, indicators);
+  if (linesMap) {
+    linesMap.forEach((line) => {
+      const nodesLength = line.length;
+      line.forEach((node, i) => {
+        if (i !== nodesLength - 1) {
+          canvasDrawLine(ctx, node, line[i+1]);
+        }
+      });
+    });
+  }
 
+  canvas.toBlob((blob) => {
+    FileSaver.saveAs(blob, `${ofmTitle}.png`);
   });
 };
 
@@ -553,17 +620,24 @@ const translateHTMLToCanvasToImage = (root, width, height, blocksMap, blockParam
  * @param {number} y
  * @param {number} width
  * @param {number} height
+ * @param {number} innerPaddingLeft
+ * @param {number} innerPaddingRight
  * @param {number} borderWidth
  * @param {number} borderStyle
  * @param {string} backgroundColor
+ * @param {Object} title
+ * @param {Object[]} functions
  * @param {Object[]} indicators
  */
-const canvasDrawRect = (ctx, x, y, width, height, borderWidth, borderStyle, backgroundColor, indicators) => {
+const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPaddingRight, borderWidth, borderStyle, backgroundColor, title, functions, indicators) => {
   ctx.beginPath();
   let spaceBetweenLines = 0;
+  let indVShift = 0;
+  width += innerPaddingLeft + innerPaddingRight + 1;
+  height += 2;
+
   switch (borderStyle) {
     case 'solid':
-      // ctx.lineWidth = borderWidth.replace('px', '');
       ctx.lineWidth = borderWidth;
       break;
     case 'double':
@@ -574,29 +648,45 @@ const canvasDrawRect = (ctx, x, y, width, height, borderWidth, borderStyle, back
       } else if (parsedBorderWidth === BORDER_WIDTH.second) {
         spaceBetweenLines = BORDER_WIDTH.second;
       }
+      indVShift += 1;
       break;
     default:
       ctx.lineWidth = '1';
   }
-  ctx.fillStyle = 'black';
-  ctx.strokeRect(x, y, width + spaceBetweenLines, height + spaceBetweenLines);
   ctx.fillStyle = backgroundColor;
   ctx.fillRect(x, y, width + spaceBetweenLines, height + spaceBetweenLines);
+  ctx.fillStyle = 'black';
+  ctx.strokeRect(x + 0.5, y + 0.5, width + spaceBetweenLines, height + spaceBetweenLines);
   if (spaceBetweenLines) {
-    ctx.strokeRect(x + spaceBetweenLines, y + spaceBetweenLines, width - spaceBetweenLines, height - spaceBetweenLines);
+    ctx.strokeRect(x + spaceBetweenLines + 0.5, y + spaceBetweenLines + 0.5, width - spaceBetweenLines, height - spaceBetweenLines);
   }
 
-  if (indicators) {
-    let indicatorX = x;
-    let indicatorY = y + height + ctx.lineWidth ;
-    ctx.lineWidth = '1'
+  // заголовок
+  let textY = y + borderWidth + title.paddingTop;
+  const textX = x + innerPaddingLeft + borderWidth;
+  const textWidth = width - innerPaddingLeft - innerPaddingRight;
+  textY = rectDrawText(ctx, textX, textY, textWidth, innerPaddingLeft, innerPaddingRight, 0, title);
+
+  // Функции
+  if (functions.length > 1) {
+    functions.forEach((func) => {
+      textY = rectDrawText(ctx, textX, textY, textWidth, innerPaddingLeft, innerPaddingRight, 4, func);
+    });
+  }
+
+  // индикаторы
+  if (indicators. length > 1) {
+    let indicatorX = x + 1;
+    const indicatorY = y + height + borderWidth + indVShift;
+    ctx.lineWidth = '1';
     let prevIndX = 0;
     indicators.reverse().forEach((ind) => {
       indicatorX += ind.x - prevIndX;
       prevIndX = ind.x;
       ctx.fillStyle = 'lightyellow';
-      ctx.fillRect(indicatorX, indicatorY, ind.width, ind.height);
       ctx.strokeRect(indicatorX, indicatorY, ind.width, ind.height);
+      ctx.fillRect(indicatorX, indicatorY, ind.width, ind.height);
+
       ctx.fillStyle = 'blue';
       ctx.textAlign = 'center';
       ctx.font = ind.font;
@@ -605,44 +695,42 @@ const canvasDrawRect = (ctx, x, y, width, height, borderWidth, borderStyle, back
   }
 };
 
-drawScheme('', 6, true );
+const rectDrawText = (ctx, blockX, blockY, width, paddingLeft, paddingRight, lineSpacing, textObject) => {
+  const words = textObject.text.split(' ');
+  const maxWidth = width;
+  const textX = blockX + Math.trunc(maxWidth / 2);
+  let line = '';
+  let textY = blockY + Math.trunc(textObject.paddingTop * 2 + textObject.height / 2);
 
-// html2canvas(document.getElementById('parent')).then((canvas) => {
-//   // console.log(canvas.toDataURL('image/jpeg'));
-//   const blob = canvas.toBlob(function(blob) {
-//     console.log(blob);
-//   }, 'image/jpeg', 0.95);
-//   // FileSaver.saveAs(blob, 'ofm');
-// }
-// );
+  ctx.fillStyle = 'black';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = textObject.font;
+  words.forEach((word) => {
+    const tmpLine = line + word + ' ';
+    const tmpWidth = ctx.measureText(tmpLine).width;
+    if (tmpWidth < maxWidth) {
+      line = tmpLine;
+    } else {
+      ctx.fillText(line, textX, textY);
+      line = word + ' ';
+      textY += textObject.height + lineSpacing;
+    }
+  });
+  if (line) {
+    ctx.fillText(line, textX, textY);
+    textY += textObject.height + textObject.paddingBottom;
+  }
+  return textY;
+};
 
-// html2canvas(document.getElementById('root'))
-//     .then(function(canvas) {
-//       document.body.appendChild(canvas);
-//     }
-//     );
+const canvasDrawLine = (ctx, pointFrom, pointTo) => {
+  ctx.beginPath();
+  ctx.moveTo(pointFrom.x + 0.5, pointFrom.y + 0.5);
+  ctx.lineTo(pointTo.x + 0.5, pointTo.y + 0.5);
+  ctx.fillStyle = 'black';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+};
 
-// htmlToImage.toBlob(document.getElementById('root'))
-//     .then(function(blob) {
-//       FileSaver.saveAs(blob, 'ofm');
-//       // console.log(blob);
-//     })
-//     .catch(function(error) {
-//       console.error('oops, something went wrong!', error);
-//     });
-
-// const FormPress = document.createElement('form');
-// FormPress.action = 'SAPEVENT:inner_html';
-// FormPress.method = 'post';
-// FormPress.id = 'FormPress';
-//
-// const myInput = document.createElement('input');
-// myInput.type = 'hidden';
-// myInput.name = 'myInput';
-// myInput.id = 'myInput';
-// myInput.value = 'myInput';
-// myInput.readonly = 'readonly';
-//
-// FormPress.appendChild(myInput);
-// document.body.appendChild(FormPress);
-// FormPress.submit();
+drawScheme();
