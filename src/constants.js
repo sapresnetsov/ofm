@@ -61,4 +61,5 @@ export const H_BLOCK_PADDING = 5;
 export const H_SPACE_BETWEEN_BLOCKS = 20 + H_BLOCK_PADDING * 2;
 export const V_SPACE_BETWEEN_BLOCKS = 25;
 export const LEVEL_WIDTH_STEP = 15;
+export const AREA_SHIFT = 20;
 

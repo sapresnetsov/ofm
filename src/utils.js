@@ -119,9 +119,10 @@ export const getPoint = (pX, pY) => {
  * Получение параметров HTML-блока и параметров отображения по смыслу в ОФМ
  * @param {Object} block
  * @param {Object} ofmValue
+ * @param {number} nearParentTop
  * @return {BlockParams}
  */
-export const getBlockParams = (block, ofmValue) => {
+export const getBlockParams = (block, ofmValue, nearParentTop) => {
   const left = parseInt(block.style.left, 10);
   const top = parseInt(block.style.top, 10);
   const width = parseInt(block.style.width, 10);
@@ -191,6 +192,7 @@ export const getBlockParams = (block, ofmValue) => {
     bottom: getPoint(left + width / 2 + innerPaddingLeft, top + height + borderWidth * 2),
     left: getPoint(left, top + height / 2),
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
+    nearParentTop: nearParentTop,
     additionalInfo: ofmValue.additionalInfo,
     backgroundColor: innerBlockStyle.backgroundColor,
     id: ofmValue.id,
@@ -209,9 +211,10 @@ export const getBlockParams = (block, ofmValue) => {
  * @param {Object} child
  * @param {Map} blocksMap
  * @param {Map} blockParamsMap
+ * @param {Object} parentParams
  * @return {HTMLElement}
  */
-export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMap) => {
+export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMap, parentParams) => {
   const blockType = child.type || 'default';
   const blockLevel = child.level || 'default';
   const initialBlockParams = [x, y, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
@@ -224,7 +227,7 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
   childBlock.children[0].style.height = childHeight + 'px';
   childBlock.children[1].style.top = indicatorBlockTop + 'px';
   blocksMap.set(child.id, childBlock);
-  blockParamsMap.set(child.id, getBlockParams(childBlock, child));
+  blockParamsMap.set(child.id, getBlockParams(childBlock, child, parentParams.top.y));
   return childBlock;
 };
 
@@ -271,13 +274,16 @@ const getDomValue = (id) => {
  * @param {Point} startPoint
  * @param {Point} endPoint
  * @param {string} lineType
+ * @param {string} lineStyle
  */
-export const createLine = (root, startPoint, endPoint, lineType) => {
+export const createLine = (root, startPoint, endPoint, lineType, lineStyle='solid') => {
   const line = document.createElement(`div`);
   line.setAttribute(`class`, `line ` + lineType);
+  line.style.borderStyle = lineStyle;
 
   switch (lineType) {
-    case `horizontal_line`:
+    // горизонтальная линия
+    case `h`:
       if (startPoint.y <= endPoint.y) {
         line.style.top = startPoint.y +`px`;
       } else {
@@ -290,7 +296,8 @@ export const createLine = (root, startPoint, endPoint, lineType) => {
       }
       line.style.width = Math.abs(startPoint.x - endPoint.x) + `px`;
       break;
-    case `vertical_line`:
+    // вертикальная линия
+    case `v`:
       if (startPoint.x <= endPoint.x) {
         line.style.left = startPoint.x +`px`;
       } else {
@@ -329,7 +336,7 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     // точки соединения находятся на одной вертикали
     if (Math.abs(fromPoint.x - toPoint.x) < 5 && (!orgUnitArea || orgUnitArea.width === 0)) {
       toPoint.x += (fromPoint.x - toPoint.x);
-      createLine(root, fromPoint, toPoint, 'vertical_line');
+      createLine(root, fromPoint, toPoint, 'v');
       linesMap.set(key, [
         {...fromPoint},
         {...toPoint},
@@ -342,9 +349,9 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
       const yMiddle = toPoint.y - stdNodeShift;
       const parMidPoint = getPoint(fromPoint.x, yMiddle);
       const childMidPoint = getPoint(toPoint.x, yMiddle);
-      createLine(root, fromPoint, parMidPoint, 'vertical_line');
-      createLine(root, parMidPoint, childMidPoint, 'horizontal_line');
-      createLine(root, childMidPoint, toPoint, 'vertical_line');
+      createLine(root, fromPoint, parMidPoint, 'v');
+      createLine(root, parMidPoint, childMidPoint, 'h');
+      createLine(root, childMidPoint, toPoint, 'v');
       linesMap.set(key, [
         {...fromPoint},
         {...parMidPoint},
@@ -356,11 +363,11 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
       const topLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, orgUnitArea.y - stdNodeShift);
       const bottomLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, toPoint.y - stdNodeShift);
       const bottomAreaPoint = getPoint(toPoint.x, toPoint.y - stdNodeShift);
-      createLine(root, fromPoint, topAreaPoint, 'vertical_line');
-      createLine(root, topAreaPoint, topLeftAreaPoint, 'horizontal_line');
-      createLine(root, topLeftAreaPoint, bottomLeftAreaPoint, 'vertical_line');
-      createLine(root, bottomLeftAreaPoint, bottomAreaPoint, 'horizontal_line');
-      createLine(root, bottomAreaPoint, toPoint, 'vertical_line');
+      createLine(root, fromPoint, topAreaPoint, 'v');
+      createLine(root, topAreaPoint, topLeftAreaPoint, 'h');
+      createLine(root, topLeftAreaPoint, bottomLeftAreaPoint, 'v');
+      createLine(root, bottomLeftAreaPoint, bottomAreaPoint, 'h');
+      createLine(root, bottomAreaPoint, toPoint, 'v');
       linesMap.set(key, [
         {...fromPoint},
         {...topAreaPoint},
@@ -381,9 +388,9 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     if (toPoint.x >= fromPoint.x ) {
       const parMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y);
       const childMidPoint = getPoint(fromPoint.x - stdNodeShift, toPoint.y);
-      createLine(root, fromPoint, parMidPoint, 'horizontal_line');
-      createLine(root, parMidPoint, childMidPoint, 'vertical_line');
-      createLine(root, childMidPoint, toPoint, 'horizontal_line');
+      createLine(root, fromPoint, parMidPoint, 'h');
+      createLine(root, parMidPoint, childMidPoint, 'v');
+      createLine(root, childMidPoint, toPoint, 'h');
       linesMap.set(key, [
         {...fromPoint},
         {...parMidPoint},
@@ -396,7 +403,7 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
   if (fromSide === RIGHT && toSide === LEFT) {
     if (Math.abs(fromPoint.y - toPoint.y) < 15) {
       toPoint.y += (fromPoint.y - toPoint.y);
-      createLine(root, fromPoint, toPoint, 'horizontal_line');
+      createLine(root, fromPoint, toPoint, 'h');
       linesMap.set(key, [
         {...fromPoint},
         {...toPoint},
@@ -407,9 +414,9 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     if (toPoint.x >= fromPoint.x ) {
       const parMidPoint = getPoint(toPoint.x - stdNodeShift, fromPoint.y);
       const childMidPoint = getPoint(toPoint.x - stdNodeShift, toPoint.y);
-      createLine(root, fromPoint, parMidPoint, 'horizontal_line');
-      createLine(root, parMidPoint, childMidPoint, 'vertical_line');
-      createLine(root, childMidPoint, toPoint, 'horizontal_line');
+      createLine(root, fromPoint, parMidPoint, 'h');
+      createLine(root, parMidPoint, childMidPoint, 'v');
+      createLine(root, childMidPoint, toPoint, 'h');
       linesMap.set(key, [
         {...fromPoint},
         {...parMidPoint},
