@@ -121,9 +121,10 @@ export const getPoint = (pX, pY) => {
  * @param {Object} block
  * @param {Object} ofmValue
  * @param {number} nearParentTop
+ * @param {Boolean} [isRootChild]
  * @return {BlockParams}
  */
-export const getBlockParams = (block, ofmValue, nearParentTop) => {
+export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false) => {
   const left = parseInt(block.style.left, 10);
   const top = parseInt(block.style.top, 10);
   const width = parseInt(block.style.width, 10);
@@ -195,6 +196,7 @@ export const getBlockParams = (block, ofmValue, nearParentTop) => {
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
     nearParentTop: nearParentTop,
     additionalInfo: ofmValue.additionalInfo,
+    firstLevel: isRootChild,
     backgroundColor: innerBlockStyle.backgroundColor,
     id: ofmValue.id,
     title: title,
@@ -213,9 +215,10 @@ export const getBlockParams = (block, ofmValue, nearParentTop) => {
  * @param {Map} blocksMap
  * @param {Map} blockParamsMap
  * @param {Object} parentParams
+ * @param {Boolean} [isRootChild]
  * @return {HTMLElement}
  */
-export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMap, parentParams) => {
+export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMap, parentParams, isRootChild) => {
   const blockType = child.type || 'default';
   const blockLevel = child.level || 'default';
   const initialBlockParams = [x, y, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
@@ -228,7 +231,7 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
   childBlock.children[0].style.height = childHeight + 'px';
   childBlock.children[1].style.top = indicatorBlockTop + 'px';
   blocksMap.set(child.id, childBlock);
-  blockParamsMap.set(child.id, getBlockParams(childBlock, child, parentParams.top.y));
+  blockParamsMap.set(child.id, getBlockParams(childBlock, child, parentParams.top.y, isRootChild));
   return childBlock;
 };
 

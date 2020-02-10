@@ -56,7 +56,7 @@ export const drawScheme = () => {
     stampBlock = drawStamp(ofmStamp, parentWidth);
 
     if (parentBlock.children[0].clientHeight + parY < stampBlock.bottom) {
-      parentBlock.style.top = `${stampBlock.bottom - parentBlock.children[0].clientHeight - parY}px`;
+      parentBlock.style.top = `${stampBlock.bottom - 2 * parY}px`;
       blockParamsMap.set(parent.id, getBlockParams(parentBlock, parent, 0));
       parentBlockParams = blockParamsMap.get(parent.id);
     }
@@ -65,7 +65,7 @@ export const drawScheme = () => {
   // отрисовка первого уровня
   let parentBlockParams = blockParamsMap.get(parent.id);
   if (parent.type === BLOCK_TYPES.leadership) {
-    maxInlineCount = 4;
+    maxInlineCount = 3;
     drawFirstRow(blocksMap, blockParamsMap, parent, parentBlockParams);
   }
 
@@ -122,6 +122,8 @@ export const drawScheme = () => {
     drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, parent);
   }
 
+  // отрисовка линий координации
+
   // отрисовка разеделителей областей с приписным штатом/ структурными подразделениями
   if (drawSeparators) {
     drawAreaSeparator(assignedStaffAreasMap, fullWidth);
@@ -160,7 +162,7 @@ const drawFirstRow = (blocksMap, blockParamsMap, parent, parentParams) => {
   const y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
 
   parent.children.forEach((child) => {
-    const childBlock = appendBlock(x, y, width, height, child, blocksMap, blockParamsMap, parentParams);
+    const childBlock = appendBlock(x, y, width, height, child, blocksMap, blockParamsMap, parentParams, true);
     const childHeight = parseInt(childBlock.children[0].clientHeight);
     const borderWidth = parseInt(childBlock.children[0].style.borderWidth);
 
@@ -296,8 +298,11 @@ const drawColumns = (blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAr
     area.y = maxAssignedStaffVerticalShift;
   });
 
-  // сдвиг блоко структурных подразделений вниз
+  // сдвиг блоков структурных подразделений вниз
   shiftOtherUnitsDown(blocksMap, blockParamsMap, STRUCTURAL_UNIT, maxStructuralUnitsVerticalShift);
+  structuralUnitAreasMap.forEach((area) => {
+    area.y = maxStructuralUnitsVerticalShift;
+  });
 };
 
 /**
@@ -603,7 +608,7 @@ const shiftOrgUnitsDown = (parent, blocksMap, blockParamsMap, shift) => {
  */
 const shiftOtherUnitsDown = (blocksMap, blockParamsMap, additionalInfo, verticalShift) => {
   blockParamsMap.forEach((blockParams, key) => {
-    if (blockParams.additionalInfo === additionalInfo) {
+    if (blockParams.additionalInfo === additionalInfo && blockParams.isRootChild === false) {
       const block = blocksMap.get(key);
       const top = parseInt(block.style.top);
       let additionalShift = 0;
