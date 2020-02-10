@@ -237,6 +237,7 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
  * @return {{
  *  maxDepth: string,
  *  ofmDataStr: string,
+ *  ofmStampStr: string,
  *  maxDepth: string,
  *  drawSeparators: string,
  *  saveToDom: string,
@@ -254,7 +255,7 @@ export const getDataFromDOM = () => {
   const toImage = getDomValue('toImage');
   const toPdf = getDomValue('toPdf');
 
-  return {ofmDataStr, ofmTitle, maxDepth, drawSeparators, saveToDom, toImage, toPdf};
+  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf};
 };
 
 /**
