@@ -60,7 +60,7 @@ export const struct = [{
           ],
           'level': 'independent',
           'otype': 'O',
-          'type': 'technical',
+          'type': 'default',
           'children': [
             {
               'id': '40',

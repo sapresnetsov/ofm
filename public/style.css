@@ -136,3 +136,15 @@ div.vertical_line {
 div.horizontal_line {
     height: 0;
 }
+
+div.name_block {
+    word-break: break-all;
+}
+
+p.prop {
+    margin: 0
+}
+
+p.prop_name {
+    font-weight: 600;
+}

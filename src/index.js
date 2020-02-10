@@ -9,7 +9,7 @@ import {
 import {MIN_BLOCK_HEIGHT} from './constants';
 import {IND_HEIGHT} from './constants';
 import {
-  createBlock, createUpsideDownConnector,
+  createBlock, createUpsideDownConnector, createStampBlock,
   getBlockParams,
   getDataFromDOM,
 } from './utils';
@@ -18,6 +18,7 @@ import {struct} from './data';
 const blocksMap = new Map();
 const blockParamsMap = new Map();
 const linesMap = new Map();
+const initialYShift = 20;
 
 // Инициализация отрисовки схемы
 export const init = () => {
@@ -32,8 +33,9 @@ export const init = () => {
   const root = document.getElementById('root');
   const screenWidth = screen.width;
 
-  const {ofmDataStr, maxDepth} = getDataFromDOM();
+  const {ofmDataStr, ofmStampStr, maxDepth} = getDataFromDOM();
   let parent;
+
   if (ofmDataStr) {
     const ofmData = JSON.parse(ofmDataStr.replace(new RegExp('[\\n]+\\s\\s+', 'g'), ''));
     parent = ofmData[0];
@@ -44,9 +46,23 @@ export const init = () => {
   // первоначально корневой блок отрисовывается посередине экрана
   const parentWidth = MIN_BLOCK_WIDTH + LEVEL_WIDTH_STEP * maxDepth;
   const x = screenWidth / 2 - parentWidth / 2;
-  const y = 20;
+  const y = initialYShift;
   const parentBlock = createBlock(x, y, parentWidth, MIN_BLOCK_HEIGHT, parent.type, parent.level, parent.title, parent.functions, parent.indicators);
   root.appendChild(parentBlock);
+
+  // отрисовка штампа схемы
+  let stampBlock;
+  const tmpStampStr = ofmStampStr.trim();
+  if (tmpStampStr) {
+    const ofmStamp = JSON.parse(ofmStampStr.replace(new RegExp('[\\n]+\\s\\s+', 'g'), ''));
+    stampBlock = drawStamp(ofmStamp, screenWidth);
+
+    if (parentBlock.children[0].clientHeight + y < stampBlock.bottom) {
+      parentBlock.style.top = `${stampBlock.bottom - parentBlock.children[0].clientHeight - y}px`;
+      blockParamsMap.set(parent.id, getBlockParams(parentBlock));
+      parentBlockParams = blockParamsMap.get(parent.id);
+    }
+  }
 
   let newHeight = parentBlock.children[0].clientHeight;
 
@@ -55,6 +71,7 @@ export const init = () => {
     newHeight = parentBlock.clientHeight;
   } else {
     parentBlock.style.height = newHeight + 'px';
+    parentBlock.children[0].style.height = newHeight + 'px';
     parentBlock.children[1].style.top = newHeight + 'px';
   }
   const indicatorBlockTop = newHeight + BORDER_WIDTH[parent.level] * 2;
@@ -65,12 +82,11 @@ export const init = () => {
   let parentBlockParams = blockParamsMap.get(parent.id);
   drawFirstRow(root, blocksMap, blockParamsMap, parent, parentBlockParams);
 
-  // TODO необходимо нормально обозвать переменные
   let nextShift = 0;
   let shiftsCount = 0;
   parent.children.forEach((child) => {
     // сдвиг блока вправо
-    if (!!nextShift) {
+    if (nextShift) {
       const childBlock = blocksMap.get(child.id);
       const childBlockParams = blockParamsMap.get(child.id);
       childBlock.style.left = `${childBlockParams.x + nextShift - childBlockParams.width * shiftsCount}px`;
@@ -82,11 +98,9 @@ export const init = () => {
     const shift = drawOrgUnits(blocksMap, blockParamsMap, child, childBlockParams);
 
     // если есть заместители у ШД (S -> S), то отрисовываются их блоки
-    let lastRightPoint;
     if (child.otype === POSITION) {
       childBlockParams = blockParamsMap.get(child.id);
-      const {deputyVerticalShift, deputyRightPoint} = drawDeputy(blocksMap, blockParamsMap, child, childBlockParams);
-      lastRightPoint = deputyRightPoint;
+      const {deputyVerticalShift} = drawDeputy(blocksMap, blockParamsMap, child, childBlockParams);
       // если заместители по высоте превышают допустимый лимит, то требуется
       // сдвинуть нижележащие блоки орг. единиц
       if (deputyVerticalShift) {
@@ -103,8 +117,16 @@ export const init = () => {
   const childBlockParams = blockParamsMap.get(parent.children[parent.children.length - 1].id);
   const fullWidth = childBlockParams.right.x;
 
-  // итоговое выравнивание корневого элемента по общей ширине схемы
-  parentBlock.style.left = `${fullWidth / 2 - parentWidth / 2}px`;
+  // итоговое выравнивание корневого элемента и штампа по общей ширине схемы
+  const newParentBlockLeft = fullWidth / 2 - parentWidth / 2;
+  if (tmpStampStr) {
+    let newStampBlockLeft = fullWidth - parseInt(stampBlock.style.width) - 10;
+    if (newStampBlockLeft < newParentBlockLeft + parentWidth + 50) {
+      newStampBlockLeft = newParentBlockLeft + parentWidth + 50;
+    }
+    stampBlock.style.left = `${newStampBlockLeft}px`;
+  }
+  parentBlock.style.left = `${newParentBlockLeft}px`;
   blockParamsMap.set(parent.id, getBlockParams(parentBlock));
   parentBlockParams = blockParamsMap.get(parent.id);
 
@@ -282,8 +304,8 @@ const drawFirstRow = (root, blocksMap, blockParamsMap, parent, parentParams) => 
 
   const globalWidth = width * count + H_SPACE_BETWEEN_BLOCKS * ( count - 1 );
   let x = parentParams.x - globalWidth / 2;
-  if (x < 0) {
-    x = H_SPACE_BETWEEN_BLOCKS;
+  if (x < 0 || parent.children.length === 1) {
+    x = H_SPACE_BETWEEN_BLOCKS - 10;
   }
   const y = parentParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
 
@@ -356,6 +378,44 @@ const drawConnectors = (linesMap, blockParamsMap, parent) => {
     const childBlockParams = blockParamsMap.get(child.id);
     createUpsideDownConnector(root, linesMap, parentBlockParams, childBlockParams, RIGHT, LEFT);
   });
+};
+
+/**
+ * Отрисовка штампа в правом верхнем углу
+ * @param {Object} stamp
+ * @param {number} fullWidth
+ * @return {HTMLElement}
+ */
+const drawStamp = (stamp, fullWidth) => {
+  const width = 500;
+  const y = initialYShift;
+  const x = fullWidth - width - 10;
+
+  let propArr = stamp.name.split('/');
+  const name = `${propArr[0]} ${propArr[1]}`;
+
+  const properties = [];
+  propArr = stamp.staff_hc.split('/');
+  let prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  propArr = stamp.np.split('/');
+  prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  propArr = stamp.nrp_all.split('/');
+  prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  propArr = stamp.nup_min.split('/');
+  prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  propArr = stamp.kzv_max.split('/');
+  prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  return createStampBlock(x, y, width, name, properties);
 };
 
 const saveBlockParamsMapToDOM = () => {

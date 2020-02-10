@@ -64,7 +64,7 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
     let indicatorWidth = IND_WIDTH;
     let indWidthDiff;
     const indicatorsLength = indicators.length;
-    // TODO продумать, а то получается какая-то дичь
+    // TODO продумать, а то выглядит плохо
     if (indicatorsLength > 3) {
       indicatorWidth = Math.trunc((width + blockBorderWidth * 2) / indicatorsLength) + indBorderWidth;
       indWidthDiff = (width + blockBorderWidth * 2 - indicatorWidth * indicatorsLength) + 2;
@@ -140,13 +140,14 @@ export const getBlockParams = (block) => {
 
 /**
  * Получение данных через index.html
- * @return {{maxDepth: string, ofmDataStr: string}}
+ * @return {{ofmDataStr: string, ofmStampStr: string, maxDepth: string}}
  */
 export const getDataFromDOM = () => {
   const ofmDataStr = document.getElementById('ofmData').textContent;
+  const ofmStampStr = document.getElementById('ofmStamp').textContent;
   const maxDepth = document.getElementById('maxDepth').textContent;
 
-  return {ofmDataStr, maxDepth};
+  return {ofmDataStr, ofmStampStr, maxDepth};
 };
 
 /**
@@ -263,4 +264,66 @@ const getPointOfSide = (blockParams, side) => {
       break;
   }
   return point;
+};
+
+/**
+ * Отрисовка блока штампа
+ * @param {Number} x
+ * @param {Number} y
+ * @param {Number} width
+ * @param {String} name
+ * @param {Array} properties
+ * @return {HTMLElement}
+ */
+export const createStampBlock = (x, y, width, name, properties) => {
+  const outerBlock = document.createElement(`div`);
+  outerBlock.setAttribute(`class`, `stamp_block`);
+  outerBlock.style.left = `${x}px`;
+  outerBlock.style.top = `${y}px`;
+  outerBlock.style.width = `${width}px`;
+  // outerBlock.style.height = `100px`;
+  outerBlock.style.borderWidth = `1px`;
+
+  root.appendChild(outerBlock);
+
+  const nameBlock = document.createElement(`div`);
+  nameBlock.setAttribute(`class`, `name_block`);
+  nameBlock.textContent = name;
+  nameBlock.style.width = `${width}px`;
+  outerBlock.appendChild(nameBlock);
+
+  const rowHeight = 20;
+  let top = nameBlock.clientHeight + 10;
+  properties.forEach((prop) => {
+    const rowBlock = document.createElement(`div`);
+    rowBlock.style.width = `${width}px`;
+    rowBlock.style.height = `${rowHeight}px`;
+    rowBlock.style.top = `${top}px`;
+
+    const nameBlock = document.createElement(`div`);
+    nameBlock.style.width = `${width-130}px`;
+
+    const valueBlock = document.createElement(`div`);
+    valueBlock.style.left = `${width-130}px`;
+    valueBlock.style.width = `${130}px`;
+
+    const propName = document.createElement(`p`);
+    propName.setAttribute(`class`, `prop_name prop`);
+    propName.textContent = prop.name;
+    nameBlock.appendChild(propName);
+
+    const propValue = document.createElement(`p`);
+    propValue.setAttribute(`class`, `prop_value prop`);
+    propValue.textContent = prop.value;
+    valueBlock.appendChild(propValue);
+
+    rowBlock.appendChild(nameBlock);
+    rowBlock.appendChild(valueBlock);
+
+    outerBlock.appendChild(rowBlock);
+
+    top += rowHeight;
+  });
+  outerBlock.bottom = top - y;
+  return outerBlock;
 };
