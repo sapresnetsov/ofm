@@ -10,7 +10,7 @@ import {
 } from './constants';
 
 /**
- *
+ * Создания блока
  * @param {number} x
  * @param {number} y
  * @param {number} width
@@ -18,7 +18,7 @@ import {
  * @param {string} blockType
  * @param {string} blockLevel
  * @param {string} title
- * @param {any[]} functions
+ * @param {String[]} functions
  * @param {any[]} indicators
  * @return {HTMLElement}
  */
@@ -32,11 +32,13 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
 
   const blockBorderWidth = BORDER_WIDTH[blockLevel];
   const blockBody = document.createElement(`div`);
+
   blockBody.setAttribute(`class`, `inner_block ${blockLevel}`);
   blockBody.style.paddingLeft = blockBody.style.paddingRight = `${H_BLOCK_PADDING}px`;
   blockBody.style.borderWidth = `${blockBorderWidth}px`;
   blockBody.style.backgroundColor = `${BACKGROUND_COLOR[blockType]}`;
-  // Заголовок блока
+
+ // Заголовок блока
   const blockTitle = document.createElement(`h3`);
   blockTitle.setAttribute(`class`, `title_text text_color_text`);
   blockTitle.textContent = title;
@@ -84,6 +86,9 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
       indicator.style.width = `${indicatorWidth}px`;
       indicator.style.height = `${IND_HEIGHT}px`;
       indicator.style.borderWidth = `${indBorderWidth}px`;
+      indicator.style.backgroundColor = 'lightyellow';
+      indicator.style.color = 'blue';
+      indicator.style.fontSize = '6pt';
       indicator.innerHTML = `<p style="margin: 0">${ind.key} ${ind.value}</p>`;
       if (i !== 0) {
         indicator.style.borderRight = `0`;
@@ -106,17 +111,19 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
  */
 export const getPoint = (pX, pY) => {
   return {
-    x: pX,
-    y: pY,
+    x: Math.floor(pX),
+    y: Math.floor(pY),
   };
 };
 
 /**
- * Получение фактических параметров HTML-блока
+ * Получение параметров HTML-блока и параметров отображения по смыслу в ОФМ
  * @param {Object} block
+ * @param {Object} ofmValue
+ * @param {number} nearParentTop
  * @return {BlockParams}
  */
-export const getBlockParams = (block) => {
+export const getBlockParams = (block, ofmValue, nearParentTop) => {
   const left = parseInt(block.style.left, 10);
   const top = parseInt(block.style.top, 10);
   const width = parseInt(block.style.width, 10);
@@ -125,29 +132,142 @@ export const getBlockParams = (block) => {
   const borderWidth = parseInt(block.children[0].style.borderWidth, 10);
   const innerPaddingLeft = parseInt(block.children[0].style.paddingLeft, 10);
   const innerPaddingRight = parseInt(block.children[0].style.paddingRight, 10);
+  const innerBlockStyle = window.getComputedStyle(block.children[0]);
+  // const indicatorsBlockStyle = window.getComputedStyle(block.children[1]);
+  // заголовок
+  const titleTag = block.children[0].children[0];
+  const titleStyle = window.getComputedStyle(titleTag);
+  const titleHeight = 19;
+  const title = {
+    font: `bold ${titleStyle.fontSize} Calibri`,
+    text: titleTag.innerText,
+    height: titleHeight,
+    paddingTop: parseInt(titleStyle.paddingTop, 10),
+    paddingBottom: parseInt(titleStyle.paddingBottom, 10),
+    paddingLeft: parseInt(titleStyle.paddingLeft, 10),
+    paddingRight: parseInt(titleStyle.paddingRight, 10),
+  };
+  // функции
+  let functions = [];
+  if (block.children[0].children.length > 1) {
+    const funcArr = [...block.children[0].children];
+    const funcStyle = window.getComputedStyle(block.children[0].children[1]);
+    let funcHeight = parseInt(funcStyle.height, 10);
+    funcHeight = funcHeight / Math.ceil(funcHeight / parseInt(funcStyle.fontSize, 10));
+    functions = funcArr.slice(1, funcArr.length).map((func) => {
+      return {
+        font: `${funcStyle.fontSize} ${funcStyle.fontFamily}`,
+        text: func.innerText,
+        height: funcHeight,
+        paddingTop: parseInt(funcStyle.paddingTop, 10),
+        paddingBottom: parseInt(funcStyle.paddingBottom, 10),
+      };
+    });
+  }
+  // Индикаторы
+  let indicators = [];
+  if (block.children[1].children && block.children[1].children.length > 0) {
+    indicators = [...block.children[1].children].map((ind) => {
+      return {
+        x: parseInt(ind.style.left, 10),
+        y: parseInt(ind.style.top, 10),
+        width: parseInt(ind.style.width, 10),
+        height: parseInt(ind.style.height, 10),
+        borderWidth: 1,
+        backgroundColor: ind.style.backgroundColor,
+        text: ind.innerText,
+        font: `${ind.style.fontSize} Calibri`,
+      };
+    });
+  }
   return {
     x: left,
     y: top,
     width: width,
     height: height,
+    innerPaddingLeft: innerPaddingLeft,
+    innerPaddingRight: innerPaddingRight,
     borderWidth: borderWidth,
+    borderStyle: innerBlockStyle.borderStyle,
     top: getPoint(left + width / 2, top),
     bottom: getPoint(left + width / 2 + innerPaddingLeft, top + height + borderWidth * 2),
     left: getPoint(left, top + height / 2),
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
+    nearParentTop: nearParentTop,
+    additionalInfo: ofmValue.additionalInfo,
+    backgroundColor: innerBlockStyle.backgroundColor,
+    id: ofmValue.id,
+    title: title,
+    functions: functions,
+    indicators: indicators,
   };
 };
 
 /**
- * Получение данных через index.html
- * @return {{ofmDataStr: string, ofmStampStr: string, maxDepth: string}}
+ * Добавление блока
+ * @param {number} x
+ * @param {number} y
+ * @param {number} width
+ * @param {number} height
+ * @param {Object} child
+ * @param {Map} blocksMap
+ * @param {Map} blockParamsMap
+ * @param {Object} parentParams
+ * @return {HTMLElement}
+ */
+export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMap, parentParams) => {
+  const blockType = child.type || 'default';
+  const blockLevel = child.level || 'default';
+  const initialBlockParams = [x, y, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
+  const childBlock = createBlock(...initialBlockParams);
+  root.appendChild(childBlock);
+  // подбор высоты
+  const childHeight = childBlock.children[0].clientHeight;
+  const indicatorBlockTop = childHeight + BORDER_WIDTH[blockLevel] * 2;
+  // childBlock.style.height = childHeight + 'px';
+  childBlock.children[0].style.height = childHeight + 'px';
+  childBlock.children[1].style.top = indicatorBlockTop + 'px';
+  blocksMap.set(child.id, childBlock);
+  blockParamsMap.set(child.id, getBlockParams(childBlock, child, parentParams.top.y));
+  return childBlock;
+};
+
+/**
+ * Получение данных через DOM
+ * @return {{
+ *  maxDepth: string,
+ *  ofmDataStr: string,
+ *  maxDepth: string,
+ *  drawSeparators: string,
+ *  saveToDom: string,
+ *  toImage: string,
+ *  toPdf: string
+ *  }}
  */
 export const getDataFromDOM = () => {
-  const ofmDataStr = document.getElementById('ofmData').textContent;
-  const ofmStampStr = document.getElementById('ofmStamp').textContent;
-  const maxDepth = document.getElementById('maxDepth').textContent;
+  const ofmDataStr = getDomValue('ofmData');
+  const ofmTitle = getDomValue('ofmTitle');
+  const ofmStampStr = getDomValue('ofmStamp');
+  const maxDepth = getDomValue('maxDepth');
+  const drawSeparators = getDomValue('drawSeparators');
+  const saveToDom = getDomValue('saveToDom');
+  const toImage = getDomValue('toImage');
+  const toPdf = getDomValue('toPdf');
 
-  return {ofmDataStr, ofmStampStr, maxDepth};
+  return {ofmDataStr, ofmTitle, maxDepth, drawSeparators, saveToDom, toImage, toPdf};
+};
+
+/**
+ * Получение значения элемента DOM
+ * @param {string} id
+ * @return {string}
+ */
+const getDomValue = (id) => {
+  if (document.getElementById(id)) {
+    return document.getElementById(id).textContent.trim();
+  } else {
+    return '';
+  }
 };
 
 /**
@@ -156,13 +276,16 @@ export const getDataFromDOM = () => {
  * @param {Point} startPoint
  * @param {Point} endPoint
  * @param {string} lineType
+ * @param {string} lineStyle
  */
-export const createLine = (root, startPoint, endPoint, lineType) => {
+export const createLine = (root, startPoint, endPoint, lineType, lineStyle='solid') => {
   const line = document.createElement(`div`);
   line.setAttribute(`class`, `line ` + lineType);
+  line.style.borderStyle = lineStyle;
 
   switch (lineType) {
-    case `horizontal_line`:
+    // горизонтальная линия
+    case `h`:
       if (startPoint.y <= endPoint.y) {
         line.style.top = startPoint.y +`px`;
       } else {
@@ -175,7 +298,8 @@ export const createLine = (root, startPoint, endPoint, lineType) => {
       }
       line.style.width = Math.abs(startPoint.x - endPoint.x) + `px`;
       break;
-    case `vertical_line`:
+    // вертикальная линия
+    case `v`:
       if (startPoint.x <= endPoint.x) {
         line.style.left = startPoint.x +`px`;
       } else {
@@ -194,28 +318,67 @@ export const createLine = (root, startPoint, endPoint, lineType) => {
   root.appendChild(line);
 };
 
-// пока реализация предполагает только соединение низа и верха, либо бока и бока
-export const createUpsideDownConnector = (root, linesMap, blockFrom, blockTo, fromSide, toSide) => {
+/**
+ * пока реализация предполагает только соединение низа и верха, либо бока и бока
+ * @param {HTMLElement} root
+ * @param {Map} linesMap
+ * @param {Object | undefined} orgUnitArea
+ * @param {Object} blockFrom
+ * @param {Object} blockTo
+ * @param {string} fromSide
+ * @param {string} toSide
+ */
+export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom, blockTo, fromSide, toSide) => {
   const fromPoint = getPointOfSide(blockFrom, fromSide);
   const toPoint = getPointOfSide(blockTo, toSide);
+  const key = blockFrom.id + '/' + blockTo.id;
 
   const stdNodeShift = 15;
-  // точки соединения находятся на одной вертикали
   if (fromSide === BOTTOM && toSide === TOP) {
-    if (fromPoint.x >= (toPoint.x) && fromPoint.x <= (toPoint.x)) {
-      createLine(root, fromPoint, toPoint, 'vertical_line');
+    // точки соединения находятся на одной вертикали
+    if (Math.abs(fromPoint.x - toPoint.x) < 5 && (!orgUnitArea || orgUnitArea.width === 0)) {
+      toPoint.x += (fromPoint.x - toPoint.x);
+      createLine(root, fromPoint, toPoint, 'v');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...toPoint},
+        ]);
       return;
     }
-
-    // const yMiddle = Math.abs(fromPoint.y - blockTo.top.y) / 2;
-    const yMiddle = toPoint.y - stdNodeShift;
-    const parMidPoint = getPoint(fromPoint.x, yMiddle);
-    const childMidPoint = getPoint(toPoint.x, yMiddle);
-
-    // ломаная линия
-    createLine(root, fromPoint, parMidPoint, 'vertical_line');
-    createLine(root, parMidPoint, childMidPoint, 'horizontal_line');
-    createLine(root, childMidPoint, toPoint, 'vertical_line');
+    // точки соединения смещены относительно друг-друга
+    if (!orgUnitArea) {
+      // ломаная линия из трех звеньев
+      const yMiddle = toPoint.y - stdNodeShift;
+      const parMidPoint = getPoint(fromPoint.x, yMiddle);
+      const childMidPoint = getPoint(toPoint.x, yMiddle);
+      createLine(root, fromPoint, parMidPoint, 'v');
+      createLine(root, parMidPoint, childMidPoint, 'h');
+      createLine(root, childMidPoint, toPoint, 'v');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...parMidPoint},
+        {...childMidPoint},
+        {...toPoint},
+        ]);
+    } else {
+      const topAreaPoint = getPoint(fromPoint.x, orgUnitArea.y - stdNodeShift);
+      const topLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, orgUnitArea.y - stdNodeShift);
+      const bottomLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, toPoint.y - stdNodeShift);
+      const bottomAreaPoint = getPoint(toPoint.x, toPoint.y - stdNodeShift);
+      createLine(root, fromPoint, topAreaPoint, 'v');
+      createLine(root, topAreaPoint, topLeftAreaPoint, 'h');
+      createLine(root, topLeftAreaPoint, bottomLeftAreaPoint, 'v');
+      createLine(root, bottomLeftAreaPoint, bottomAreaPoint, 'h');
+      createLine(root, bottomAreaPoint, toPoint, 'v');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...topAreaPoint},
+        {...topLeftAreaPoint},
+        {...bottomLeftAreaPoint},
+        {...bottomAreaPoint},
+        {...toPoint},
+        ]);
+    }
   }
 
   if (fromSide === BOTTOM && toSide === LEFT) {
@@ -225,28 +388,53 @@ export const createUpsideDownConnector = (root, linesMap, blockFrom, blockTo, fr
   if (fromSide === LEFT && toSide === LEFT) {
     // блок снизу и правее
     if (toPoint.x >= fromPoint.x ) {
-      const yDiff = Math.abs(fromPoint.y - toPoint.y);
       const parMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y);
-      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y + yDiff);
-
-      createLine(root, fromPoint, parMidPoint, 'horizontal_line');
-      createLine(root, parMidPoint, childMidPoint, 'vertical_line');
-      createLine(root, childMidPoint, toPoint, 'horizontal_line');
+      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, toPoint.y);
+      createLine(root, fromPoint, parMidPoint, 'h');
+      createLine(root, parMidPoint, childMidPoint, 'v');
+      createLine(root, childMidPoint, toPoint, 'h');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...parMidPoint},
+        {...childMidPoint},
+        {...toPoint},
+        ]);
     }
   }
 
   if (fromSide === RIGHT && toSide === LEFT) {
+    if (Math.abs(fromPoint.y - toPoint.y) < 15) {
+      toPoint.y += (fromPoint.y - toPoint.y);
+      createLine(root, fromPoint, toPoint, 'h');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...toPoint},
+        ]);
+      return;
+    }
     // блок снизу и правее
     if (toPoint.x >= fromPoint.x ) {
       const parMidPoint = getPoint(toPoint.x - stdNodeShift, fromPoint.y);
       const childMidPoint = getPoint(toPoint.x - stdNodeShift, toPoint.y);
-      createLine(root, fromPoint, parMidPoint, 'horizontal_line');
-      createLine(root, parMidPoint, childMidPoint, 'vertical_line');
-      createLine(root, childMidPoint, toPoint, 'horizontal_line');
+      createLine(root, fromPoint, parMidPoint, 'h');
+      createLine(root, parMidPoint, childMidPoint, 'v');
+      createLine(root, childMidPoint, toPoint, 'h');
+      linesMap.set(key, [
+        {...fromPoint},
+        {...parMidPoint},
+        {...childMidPoint},
+        {...toPoint},
+        ]);
     }
   }
 };
 
+/**
+ *
+ * @param {Object} blockParams
+ * @param {string} side
+ * @return {*}
+ */
 const getPointOfSide = (blockParams, side) => {
   let point;
   switch (side) {
@@ -264,6 +452,21 @@ const getPointOfSide = (blockParams, side) => {
       break;
   }
   return point;
+};
+
+/**
+ * Получение общей высоты схемы
+ * @param {Map} areasMap
+ * @return {number} height
+ */
+export const getFullHeight = (areasMap) => {
+  let fullHeight = 0;
+  areasMap.forEach((area) => {
+    if (area.y + area.height > fullHeight) {
+      fullHeight = area.y + area.height;
+    }
+  });
+  return fullHeight;
 };
 
 /**

@@ -1,8 +1,3 @@
-export const svgNS = `http://www.w3.org/2000/svg`;
-export const TITLE_FONT_SIZE = `14pt`;
-export const FUNC_FONT_SIZE = `12pt`;
-export const TITLE_SPACE_AFTER = `5pt`;
-
 export const BLOCK_TYPES = {
   leadership: `leadership`,
   deputy: `deputy`,
@@ -16,6 +11,7 @@ export const BLOCK_TYPES = {
 export const BLOCK_LEVELS = {
   first: 'first',
   second: 'second',
+  third: 'third',
   independent: 'independent',
   dependent: 'dependent',
   default: 'default',
@@ -34,7 +30,7 @@ export const BORDER_WIDTH = {
 export const BACKGROUND_COLOR = {
   leadership: `#d9d9d9`,
   deputy: `#d9d9d9`,
-  manufacturing: `#d8e3bf`,
+  manufacturing: `#e35044`,
   technical: `#daeef3`,
   economy: `#f9fcd1`,
   management: `#dfd9e8`,
@@ -44,6 +40,10 @@ export const BACKGROUND_COLOR = {
 
 export const POSITION = 'S';
 export const ORG_UNIT = 'O';
+
+export const GOVERNANCE = 'U';
+export const ASSIGNED_STAFF = 'X';
+export const STRUCTURAL_UNIT = 'S';
 
 export const TOP = `top`;
 export const BOTTOM = `bottom`;
@@ -61,4 +61,5 @@ export const H_BLOCK_PADDING = 5;
 export const H_SPACE_BETWEEN_BLOCKS = 20 + H_BLOCK_PADDING * 2;
 export const V_SPACE_BETWEEN_BLOCKS = 25;
 export const LEVEL_WIDTH_STEP = 15;
+export const AREA_SHIFT = 20;
 
