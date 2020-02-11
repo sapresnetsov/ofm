@@ -709,6 +709,7 @@ const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPadding
   let indVShift = 0;
   width += innerPaddingLeft + innerPaddingRight + 1;
   height += 2;
+  const rectShift = 0.5;
 
   switch (borderStyle) {
     case 'solid':
@@ -730,9 +731,9 @@ const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPadding
   ctx.fillStyle = backgroundColor;
   ctx.fillRect(x, y, width + spaceBetweenLines, height + spaceBetweenLines);
   ctx.fillStyle = 'black';
-  ctx.strokeRect(x + 0.5, y + 0.5, width + spaceBetweenLines, height + spaceBetweenLines);
+  ctx.strokeRect(x + rectShift, y + rectShift, width + spaceBetweenLines, height + spaceBetweenLines);
   if (spaceBetweenLines) {
-    ctx.strokeRect(x + spaceBetweenLines + 0.5, y + spaceBetweenLines + 0.5, width - spaceBetweenLines, height - spaceBetweenLines);
+    ctx.strokeRect(x + spaceBetweenLines + rectShift, y + spaceBetweenLines + rectShift, width - spaceBetweenLines, height - spaceBetweenLines);
   }
 
   // заголовок
