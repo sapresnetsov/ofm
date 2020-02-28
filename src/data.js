@@ -866,6 +866,7 @@ export const struct = [{
           'type': 'deputy',
           'additionalInfo': 'U',
           'children': [],
+          'curation': ['30', '31', '32'],
         },
 
       ],
@@ -954,6 +955,7 @@ export const struct = [{
       'otype': 'S',
       'type': 'deputy',
       'additionalInfo': 'U',
+      'curation': ['49', '411'],
       'children': [
         {
           'id': '36',

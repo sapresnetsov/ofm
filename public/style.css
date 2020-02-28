@@ -128,7 +128,7 @@ div.indicator {
 }
 
 div.line {
-    border: 0.5px solid black;
+    border: 0.5px black;
 }
 
 div.vertical_line {
@@ -137,6 +137,18 @@ div.vertical_line {
 
 div.horizontal_line {
     height: 0;
+}
+
+div.solid {
+    border-style: solid;
+}
+
+div.blue {
+    border-color: blue;
+}
+
+div.dashed {
+    border-style: dashed;
 }
 
 div.name_block {

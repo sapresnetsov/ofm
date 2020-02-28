@@ -116,10 +116,10 @@ export const drawScheme = () => {
     parent.children.forEach((child) => {
       const childBlockParams = blockParamsMap.get(child.id);
       createUpsideDownConnector(root, linesMap, undefined, parentBlockParams, childBlockParams, BOTTOM, TOP);
-      drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, child);
+      drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, child, parent);
     });
   } else {
-    drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, parent);
+    drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, parent, parent);
   }
 
   // отрисовка линий координации
@@ -218,7 +218,7 @@ const drawColumns = (blocksMap, blockParamsMap, orgUnitAreasMap, assignedStaffAr
       const childBlock = blocksMap.get(child.id);
       const childBlockParams = blockParamsMap.get(child.id);
       childBlock.style.left = `${childBlockParams.x + nextShift - childBlockParams.width * shiftsCount}px`;
-      blockParamsMap.set(child.id, getBlockParams(childBlock, child, childBlockParams.nearParentTop));
+      blockParamsMap.set(child.id, getBlockParams(childBlock, child, childBlockParams.nearParentTop, childBlockParams.isRootChild));
       lastRightPoint = 0;
     }
     let childBlockParams = blockParamsMap.get(child.id);
@@ -516,8 +516,9 @@ const drawOtherUnits = (blocksMap, blockParamsMap, prevArea, unitsArea, parent, 
  * @param {Map} orgUnitAreasMap
  * @param {Map} assignedStaffAreasMap
  * @param {Object} parent
+ * @param {Object} [wholeStruct]
  */
-const drawConnectors = (linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, parent) => {
+const drawConnectors = (linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, parent, wholeStruct) => {
   const parentBlockParams = blockParamsMap.get(parent.id);
   let fromSide;
   let toSide;
@@ -534,7 +535,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitAreasMap, assignedStaff
   }
   const orgUnitArea = orgUnitAreasMap.get(parent.id);
   const assignedStaffArea = assignedStaffAreasMap.get(parent.id);
-  if (!parent.children) {
+  if (!parent.children && (!parent.curation || parent.curation.length === 0)) {
     return;
   }
   const orgUnits = parent.children.filter((child) => child.otype === ORG_UNIT && child.additionalInfo === GOVERNANCE);
@@ -548,12 +549,20 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitAreasMap, assignedStaff
     drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, orgUnit);
   });
 
+  // отрисовка линий к заместителям
   const positions = parent.children.filter((child) => child.otype === POSITION);
   positions.forEach((child) => {
     const childBlockParams = blockParamsMap.get(child.id);
     createUpsideDownConnector(root, linesMap, undefined, parentBlockParams, childBlockParams, RIGHT, LEFT);
+    if (child.curation && child.curation.length > 0) {
+      child.curation.forEach((curatedId) => {
+        const curatedBlockParams = blockParamsMap.get(curatedId);
+        createUpsideDownConnector(root, linesMap, undefined, childBlockParams, curatedBlockParams, BOTTOM, TOP, true);
+      });
+    }
   });
 
+  // отрисовка линий к приписному штату
   const assignedStaff = parent.children.filter((child) => child.additionalInfo === ASSIGNED_STAFF);
   let tempOrgUnit;
   if (parent.otype === POSITION && orgUnitArea) {
@@ -565,6 +574,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitAreasMap, assignedStaff
     drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, assignedStaff);
   });
 
+  // отрисовка линий к структурным подразделениям
   const structuralUnits = parent.children.filter((child) => child.additionalInfo === STRUCTURAL_UNIT);
   if (parent.otype === POSITION) {
     if (assignedStaffArea && assignedStaffArea.width && (!orgUnitArea || !orgUnitArea.width)) {
@@ -578,6 +588,15 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitAreasMap, assignedStaff
     createUpsideDownConnector(root, linesMap, tempOrgUnit, parentBlockParams, structuralUnitParams, fromSide, toSide);
     drawConnectors(linesMap, blockParamsMap, orgUnitAreasMap, assignedStaffAreasMap, structuralUnits);
   });
+
+  // отрисовка линий координации (пока доступно только для должностей и орг. единиц (не прип. штат и не СП))
+  if (parent.otype === POSITION && parent.curation && parent.curation.length > 0) {
+    // const curatedBlocks = getCuratedBlocks(wholeStruct, parent.curation, blockParamsMap);
+    parent.curation.forEach((curatedId) => {
+      const curatedBlockParams = blockParamsMap.get(curatedId);
+      createUpsideDownConnector(root, linesMap, orgUnitArea, parentBlockParams, curatedBlockParams, BOTTOM, TOP, true);
+    });
+  }
 };
 
 /**
