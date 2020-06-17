@@ -238,14 +238,15 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
 /**
  * Получение данных через DOM
  * @return {{
- *  maxDepth: string,
  *  ofmDataStr: string,
+ *  ofmTitle: string,
  *  ofmStampStr: string,
  *  maxDepth: string,
- *  drawSeparators: string,
- *  saveToDom: string,
- *  toImage: string,
- *  toPdf: string
+ *  drawSeparators: boolean,
+ *  saveToDom: boolean,
+ *  toImage: boolean,
+ *  toPdf: boolean,
+ *  deleteTechBlock: boolean,
  *  }}
  */
 export const getDataFromDOM = () => {
@@ -253,12 +254,13 @@ export const getDataFromDOM = () => {
   const ofmTitle = getDomValue('ofmTitle');
   const ofmStampStr = getDomValue('ofmStamp');
   const maxDepth = getDomValue('maxDepth');
-  const drawSeparators = getDomValue('drawSeparators');
-  const saveToDom = getDomValue('saveToDom');
-  const toImage = getDomValue('toImage');
-  const toPdf = getDomValue('toPdf');
+  const drawSeparators = getDomValue('drawSeparators') === 'true';
+  const saveToDom = getDomValue('saveToDom') === 'true';
+  const toImage = getDomValue('toImage') === 'true';
+  const toPdf = getDomValue('toPdf') === 'true';
+  const deleteTechBlock = getDomValue('deleteTechBlock') === 'true';
 
-  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf};
+  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock};
 };
 
 /**
@@ -364,6 +366,28 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     }
     // точки соединения смещены относительно друг-друга
     if (!orgUnitArea) {
+      if (curationLine) {
+        // TODO
+        if (fromPoint.x > toPoint.x) {
+          fromPoint.x -= 10;
+          toPoint.x += 10;
+        } else if (fromPoint.x < toPoint.x) {
+          fromPoint.x += 10;
+          toPoint.x -= 10;
+        }
+
+        if (Math.abs(fromPoint.x - toPoint.x) < 5 && toPoint.y === orgUnitArea.y ) {
+          toPoint.x += (fromPoint.x - toPoint.x);
+          createLine(root, fromPoint, toPoint, 'v', lineStyle, lineColor);
+          linesMap.set(key, [
+            {...fromPoint},
+            {...toPoint},
+          ]);
+          return;
+        }
+        fromPoint.x += 10;
+        toPoint.x += 10;
+      }
       // ломаная линия из трех звеньев
       const yMiddle = toPoint.y - stdNodeShift;
       const parMidPoint = getPoint(fromPoint.x, yMiddle);
@@ -379,6 +403,20 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
         {...endPoint},
         ]);
     } else {
+      if (curationLine) {
+        fromPoint.x -= 10;
+        toPoint.x -= 10;
+        if (Math.abs(fromPoint.x - toPoint.x) < 5 && toPoint.y === orgUnitArea.y ) {
+          toPoint.x += (fromPoint.x - toPoint.x);
+          createLine(root, fromPoint, toPoint, 'v', lineStyle, lineColor);
+          linesMap.set(key, [
+            {...fromPoint},
+            {...toPoint},
+          ]);
+          return;
+        }
+      }
+
       const topAreaPoint = getPoint(fromPoint.x, orgUnitArea.y - stdNodeShift);
       const topLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, orgUnitArea.y - stdNodeShift);
       const bottomLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, toPoint.y - stdNodeShift);
