@@ -102,26 +102,7 @@ export const drawScheme = () => {
     stampBlock.style.left = `${newStampBlockLeft}px`;
   }
 
-  // отрисовка соединяющих линий
-  // if (parent.type === BLOCK_TYPES.leadership) {
-  //   parent.children.forEach((child) => {
-  //     const childBlockParams = blockParamsMap.get(child.id);
-  //     let fromSize;
-  //     let toSize;
-  //     if (child.type === BLOCK_TYPES.deputy) {
-  //       fromSize = RIGHT;
-  //       toSize = LEFT;
-  //     } else {
-  //       fromSize = BOTTOM;
-  //       toSize = TOP;
-  //     }
-  //     createUpsideDownConnector(root, linesMap, undefined, parentBlockParams, childBlockParams, fromSize, toSize);
-  //     drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, child, parent);
-  //   });
-  // } else {
-    drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
-  // }
-
+  drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
   // отрисовка линий координации
 
   // отрисовка разеделителей областей с приписным штатом/ структурными подразделениями
@@ -159,7 +140,7 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
   const children = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo !== STRUCTURAL_UNIT && child.additionalInfo !== ASSIGNED_STAFF);
 
   const childrenCount = children.length;
-  if (childrenCount === 0) {
+  if (childrenCount === 0 && !parent.children.filter((child) => child.type === BLOCK_TYPES.deputy)) {
     return [0, 0];
   }
 
@@ -183,7 +164,9 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
 
     // Отрисовка заместителей без потомков
     const deputyVerticalShift = drawDeputy(blocksMap, blockParamsMap, parent, parentBlockParams);
-    y += deputyVerticalShift;
+    if (childrenCount > 1) {
+      y += deputyVerticalShift;
+    }
   }
 
   children.forEach((child) => {
@@ -240,7 +223,7 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
   // если дочерние блоки необходимо вывести в одну строку, то необходимо сместить родительский блок
   // и все следующие
   let retHorizontalShift = 0;
-  if (childrenDrawnInline) {
+  if (childrenDrawnInline && childrenCount > 1) {
     if (childrenCount < inlineMaxCount) {
       childrenInlineCount = childrenCount;
     } else {
@@ -296,9 +279,13 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
     previousBottom = newChildBlockParams.bottom.y;
 
     // сдвиг заместителей без потомков
-    const deputyBottom = shiftDeputyBlocksDown(child, newChildBlockParams, blocksMap, blockParamsMap);
+    let deputyBottom = shiftDeputyBlocksDown(child, newChildBlockParams, blocksMap, blockParamsMap);
 
     // сдвиг дочерних блоков
+    if (child.children.filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === GOVERNANCE).length < 2) {
+      deputyBottom = 0;
+    }
+
     shiftChildBlocksDown(child, newChildBlockParams, blocksMap, blockParamsMap, deputyBottom, maxInlineCount);
   });
 
@@ -489,7 +476,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
     }
 
     let parentArea;
-    if (childBlockParams.y !== orgUnitArea.y) {
+    if (orgUnitArea && childBlockParams && childBlockParams.y !== orgUnitArea.y) {
       parentArea = {...orgUnitArea};
     }
 

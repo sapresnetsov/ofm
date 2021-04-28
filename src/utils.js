@@ -339,6 +339,11 @@ export const createLine = (root, startPoint, endPoint, lineType, lineStyle='soli
  */
 export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom, blockTo, fromSide, toSide, curationLine) => {
   const fromPoint = getPointOfSide(blockFrom, fromSide);
+
+  if (!blockTo) {
+    return;
+  }
+
   const toPoint = getPointOfSide(blockTo, toSide);
   const key = blockFrom.id + '/' + blockTo.id;
 
@@ -774,14 +779,14 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
     let deputyBottomY = getVerticalShiftFromChildren(deputy, blockParamsMap);
     // let deputyRightX = getHorizontalShiftFromChildren(deputy, blockParamsMap);
 
-    const firstNotDeputy = blockParamsMap.get(notDeputy[0].id);
+    const firstNotDeputy = notDeputy[0] ? blockParamsMap.get(notDeputy[0].id) : undefined;
     let notDeputyBottomY = getVerticalShiftFromChildren(notDeputy, blockParamsMap);
     let notDeputyRightX = getHorizontalShiftFromChildren(notDeputy, blockParamsMap);
     let notDeputyLeftX = getLowestLeftFromChildren(notDeputy, blockParamsMap);
 
     childrenBlocksArea.id = parent.id;
     childrenBlocksArea.x = !notDeputyLeftX ? parentBlockParams.x : notDeputyLeftX;
-    childrenBlocksArea.y = !firstNotDeputy.y ? deputyBottomY : firstNotDeputy.y;
+    childrenBlocksArea.y = (!firstNotDeputy || !firstNotDeputy.y) ? deputyBottomY : firstNotDeputy.y;
     childrenBlocksArea.width = !notDeputyRightX ? 0 : notDeputyRightX - childrenBlocksArea.x;
     childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - parentBlockParams.bottom.y;
 
