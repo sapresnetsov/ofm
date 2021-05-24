@@ -1,12 +1,12 @@
 /* eslint-disable indent */
 // отрисовка орг. блока
 import {
-  BACKGROUND_COLOR,
-  BORDER_WIDTH, BOTTOM,
+  BACKGROUND_COLOR, BLOCK_TYPES,
+  BORDER_WIDTH, BOTTOM, GOVERNANCE,
   H_BLOCK_PADDING,
   IND_HEIGHT,
   IND_WIDTH, LEFT,
-  MIN_BLOCK_HEIGHT, RIGHT, TOP,
+  MIN_BLOCK_HEIGHT, ORG_UNIT, POSITION, RIGHT, TOP, V_SPACE_BETWEEN_BLOCKS,
 } from './constants';
 
 /**
@@ -238,14 +238,15 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
 /**
  * Получение данных через DOM
  * @return {{
- *  maxDepth: string,
  *  ofmDataStr: string,
+ *  ofmTitle: string,
  *  ofmStampStr: string,
  *  maxDepth: string,
- *  drawSeparators: string,
- *  saveToDom: string,
- *  toImage: string,
- *  toPdf: string
+ *  drawSeparators: boolean,
+ *  saveToDom: boolean,
+ *  toImage: boolean,
+ *  toPdf: boolean,
+ *  deleteTechBlock: boolean,
  *  }}
  */
 export const getDataFromDOM = () => {
@@ -253,12 +254,13 @@ export const getDataFromDOM = () => {
   const ofmTitle = getDomValue('ofmTitle');
   const ofmStampStr = getDomValue('ofmStamp');
   const maxDepth = getDomValue('maxDepth');
-  const drawSeparators = getDomValue('drawSeparators');
-  const saveToDom = getDomValue('saveToDom');
-  const toImage = getDomValue('toImage');
-  const toPdf = getDomValue('toPdf');
+  const drawSeparators = getDomValue('drawSeparators') === 'true';
+  const saveToDom = getDomValue('saveToDom') === 'true';
+  const toImage = getDomValue('toImage') === 'true';
+  const toPdf = getDomValue('toPdf') === 'true';
+  const deleteTechBlock = getDomValue('deleteTechBlock') === 'true';
 
-  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf};
+  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock};
 };
 
 /**
@@ -337,6 +339,11 @@ export const createLine = (root, startPoint, endPoint, lineType, lineStyle='soli
  */
 export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom, blockTo, fromSide, toSide, curationLine) => {
   const fromPoint = getPointOfSide(blockFrom, fromSide);
+
+  if (!blockTo) {
+    return;
+  }
+
   const toPoint = getPointOfSide(blockTo, toSide);
   const key = blockFrom.id + '/' + blockTo.id;
 
@@ -347,7 +354,7 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
   let curationShift = 0;
   if (curationLine) {
     curationShift = 10;
-    stdNodeShift = 10;
+    stdNodeShift = 15;
     lineStyle = 'dashed';
     lineColor = 'blue';
   }
@@ -364,6 +371,28 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     }
     // точки соединения смещены относительно друг-друга
     if (!orgUnitArea) {
+      if (curationLine) {
+        // TODO
+        if (fromPoint.x > toPoint.x) {
+          fromPoint.x -= 10;
+          toPoint.x += 10;
+        } else if (fromPoint.x < toPoint.x) {
+          fromPoint.x += 10;
+          toPoint.x -= 10;
+        }
+
+        if (Math.abs(fromPoint.x - toPoint.x) < 5 && toPoint.y === orgUnitArea.y ) {
+          toPoint.x += (fromPoint.x - toPoint.x);
+          createLine(root, fromPoint, toPoint, 'v', lineStyle, lineColor);
+          linesMap.set(key, [
+            {...fromPoint},
+            {...toPoint},
+          ]);
+          return;
+        }
+        fromPoint.x += 10;
+        toPoint.x += 10;
+      }
       // ломаная линия из трех звеньев
       const yMiddle = toPoint.y - stdNodeShift;
       const parMidPoint = getPoint(fromPoint.x, yMiddle);
@@ -379,6 +408,20 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
         {...endPoint},
         ]);
     } else {
+      if (curationLine) {
+        fromPoint.x -= 10;
+        toPoint.x -= 10;
+        if (Math.abs(fromPoint.x - toPoint.x) < 5 && toPoint.y === orgUnitArea.y ) {
+          toPoint.x += (fromPoint.x - toPoint.x);
+          createLine(root, fromPoint, toPoint, 'v', lineStyle, lineColor);
+          linesMap.set(key, [
+            {...fromPoint},
+            {...toPoint},
+          ]);
+          return;
+        }
+      }
+
       const topAreaPoint = getPoint(fromPoint.x, orgUnitArea.y - stdNodeShift);
       const topLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, orgUnitArea.y - stdNodeShift);
       const bottomLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, toPoint.y - stdNodeShift);
@@ -488,17 +531,47 @@ const getPointOfSide = (blockParams, side) => {
 
 /**
  * Получение общей высоты схемы
- * @param {Map} areasMap
+ * @param {Map} areaMap
  * @return {number} height
  */
-export const getFullHeight = (areasMap) => {
+export const getFullHeight = (areaMap) => {
   let fullHeight = 0;
-  areasMap.forEach((area) => {
+  areaMap.forEach((area) => {
     if (area.y + area.height > fullHeight) {
       fullHeight = area.y + area.height;
     }
   });
   return fullHeight;
+};
+
+export const getFullWidthHeight = (parent, blockParamsMap, structuralUnitsAreaMap, assignedStaffAreaMap, orgUnitsAreaMap) => {
+  let fullWidth = 0;
+  let fullHeight = 0;
+  let parentBlockParams = blockParamsMap.get(parent.id);
+  if (!parent.children.length) {
+    fullHeight = parentBlockParams.bottom + IND_HEIGHT;
+    fullWidth = screen.width;
+  } else {
+    parent.children.filter((child) => child.otype === POSITION).forEach((child) => {
+      const childBlockParams = blockParamsMap.get(child.id);
+      if (childBlockParams.right.x > fullWidth) {
+        fullWidth = childBlockParams.right.x;
+      }
+    });
+
+    // общая высота схемы определяется по нижней точке областей отрисовки (ОЕ, приписной штат, СП)
+    if (structuralUnitsAreaMap.size) {
+      fullHeight = getFullHeight(structuralUnitsAreaMap);
+    } else if (assignedStaffAreaMap.size) {
+      fullHeight = getFullHeight(assignedStaffAreaMap);
+    } else if (orgUnitsAreaMap.size) {
+      fullHeight = getFullHeight(orgUnitsAreaMap);
+    } else {
+      fullHeight = getFullHeight(blockParamsMap) + IND_HEIGHT;
+    }
+  }
+
+  return {fullWidth, fullHeight}
 };
 
 /**
@@ -561,4 +634,189 @@ export const createStampBlock = (x, y, width, name, properties) => {
   });
   outerBlock.bottom = top - y;
   return outerBlock;
+};
+
+export const setExtId = (children, parentId) => {
+  children.forEach((child) => {
+    const newId = `${parentId}/${child.id}`;
+    setExtId(child.children, child.id);
+    child.id = newId;
+  })
+};
+
+/**
+ *
+ * @param children
+ * @param blockParamsMap
+ * @return {number}
+ */
+export const getHorizontalShiftFromChildren = (children, blockParamsMap) => {
+  let currentHorizontalShift = 0;
+  let maxChildrenHorizontalShift = 0;
+
+  if (!children.length) {
+    return 0;
+  }
+
+  children.forEach((child) => {
+    const childBlockParams = blockParamsMap.get(child.id);
+
+    if (!!childBlockParams) {
+      const childrenHorizontalShift = getHorizontalShiftFromChildren(child.children, blockParamsMap);
+
+      if (maxChildrenHorizontalShift < childrenHorizontalShift) {
+        maxChildrenHorizontalShift = childrenHorizontalShift;
+      }
+
+      if (currentHorizontalShift < childBlockParams.right.x) {
+        currentHorizontalShift = childBlockParams.right.x;
+      }
+    }
+  });
+
+  if (maxChildrenHorizontalShift > currentHorizontalShift) {
+    currentHorizontalShift = maxChildrenHorizontalShift;
+  }
+
+  return currentHorizontalShift;
+};
+
+/**
+ *
+ * @param children
+ * @param blockParamsMap
+ * @return {*|number|number}
+ */
+export const getVerticalShiftFromChildren = (children, blockParamsMap) => {
+
+  let currentVerticalShift = 0;
+  let maxChildrenVerticalShift = 0;
+
+  if (!children.length) {
+    return 0;
+  }
+
+  children.forEach((child) => {
+    const childBlockParams = blockParamsMap.get(child.id);
+
+    if (!!childBlockParams) {
+      const childrenVerticalShift = getVerticalShiftFromChildren(child.children, blockParamsMap);
+
+      if (maxChildrenVerticalShift < childrenVerticalShift) {
+        maxChildrenVerticalShift = childrenVerticalShift;
+      }
+
+      if (currentVerticalShift < childBlockParams.bottom.y) {
+        currentVerticalShift = childBlockParams.bottom.y;
+      }
+    }
+  });
+
+  if (maxChildrenVerticalShift > currentVerticalShift) {
+    currentVerticalShift = maxChildrenVerticalShift;
+  }
+
+  return currentVerticalShift;
+};
+
+/**
+ *
+ * @param children
+ * @param blockParamsMap
+ * @return {number}
+ */
+export const getLowestLeftFromChildren = (children, blockParamsMap) => {
+
+  let currentLeft = 100000;
+  let lowestChildrenVerticalShift = 1000000;
+
+  if (!children.length) {
+    return 100000;
+  }
+
+  children.forEach((child) => {
+    const childBlockParams = blockParamsMap.get(child.id);
+
+    if (!!childBlockParams) {
+      const childrenLeft = getLowestLeftFromChildren(child.children, blockParamsMap);
+
+      if (lowestChildrenVerticalShift > childrenLeft) {
+        lowestChildrenVerticalShift = childrenLeft;
+      }
+
+      if (currentLeft > childBlockParams.left.x) {
+        currentLeft = childBlockParams.left.x;
+      }
+    }
+  });
+
+  if (lowestChildrenVerticalShift < currentLeft) {
+    currentLeft = lowestChildrenVerticalShift;
+  }
+
+  return currentLeft;
+};
+
+/**
+ *
+ * @param parent
+ * @param blockParamsMap
+ * @return {Map}
+ */
+export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
+
+  let childrenBlocksAreas = [];
+  const childrenBlocksArea = {};
+
+  const parentBlockParams = blockParamsMap.get(parent.id);
+  if (!parent.children.length) {
+    childrenBlocksArea.x = parentBlockParams.x;
+    childrenBlocksArea.y = parentBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+  } else {
+    const deputy = parent.children.filter((child) => child.type === BLOCK_TYPES.deputy);
+    const notDeputy = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy);
+
+    let deputyBottomY = getVerticalShiftFromChildren(deputy, blockParamsMap);
+    // let deputyRightX = getHorizontalShiftFromChildren(deputy, blockParamsMap);
+
+    const firstNotDeputy = notDeputy[0] ? blockParamsMap.get(notDeputy[0].id) : undefined;
+    let notDeputyBottomY = getVerticalShiftFromChildren(notDeputy, blockParamsMap);
+    let notDeputyRightX = getHorizontalShiftFromChildren(notDeputy, blockParamsMap);
+    let notDeputyLeftX = getLowestLeftFromChildren(notDeputy, blockParamsMap);
+
+    childrenBlocksArea.id = parent.id;
+    childrenBlocksArea.x = !notDeputyLeftX ? parentBlockParams.x : notDeputyLeftX;
+    childrenBlocksArea.y = (!firstNotDeputy || !firstNotDeputy.y) ? deputyBottomY : firstNotDeputy.y;
+    childrenBlocksArea.width = !notDeputyRightX ? 0 : notDeputyRightX - childrenBlocksArea.x;
+    childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - parentBlockParams.bottom.y;
+
+    childrenBlocksAreas.push(childrenBlocksArea);
+    parent.children
+      .filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === GOVERNANCE)
+      .forEach((child) => {
+
+      const nestedChildrenBlockAreas = getChildrenBlocksAreas(child, blockParamsMap);
+      if (nestedChildrenBlockAreas.length > 0) {
+         childrenBlocksAreas = [...childrenBlocksAreas, ...nestedChildrenBlockAreas];
+      }
+    });
+  }
+
+  return childrenBlocksAreas;
+};
+
+/**
+ *
+ * @param parent
+ * @param additionalInfo
+ */
+export const getChildrenByAdditionalInfo = (parent, additionalInfo) => {
+  const govParent = {...parent};
+
+  if (govParent.children.length > 0) {
+    govParent.children = govParent.children.map((child) => getChildrenByAdditionalInfo(child, additionalInfo))
+                                           .filter((child) => child.additionalInfo === additionalInfo);
+  }
+
+  return govParent;
 };

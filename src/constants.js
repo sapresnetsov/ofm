@@ -1,6 +1,7 @@
 export const BLOCK_TYPES = {
   leadership: `leadership`,
   deputy: `deputy`,
+  legate: `legate`,
   manufacturing: `manufacturing`,
   technical: `technical`,
   economy: `economy`,
@@ -30,6 +31,7 @@ export const BORDER_WIDTH = {
 export const BACKGROUND_COLOR = {
   leadership: `#d9d9d9`,
   deputy: `#d9d9d9`,
+  legate: `#d9d9d9`,
   manufacturing: `#e35044`,
   technical: `#daeef3`,
   economy: `#f9fcd1`,
@@ -58,8 +60,8 @@ export const IND_HEIGHT = 15;
 export const IND_WIDTH = 40;
 // при задании величины необходимо учитывать padding внутри блоков
 export const H_BLOCK_PADDING = 5;
-export const H_SPACE_BETWEEN_BLOCKS = 20 + H_BLOCK_PADDING * 2;
-export const V_SPACE_BETWEEN_BLOCKS = 35;
+export const H_SPACE_BETWEEN_BLOCKS = 25 + H_BLOCK_PADDING * 2;
+export const V_SPACE_BETWEEN_BLOCKS = 30;
 export const LEVEL_WIDTH_STEP = 15;
 export const AREA_SHIFT = 20;
 

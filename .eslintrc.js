@@ -3,9 +3,9 @@ module.exports = {
     'browser': true,
     'es6': true,
   },
-  'extends': [
-    'google',
-  ],
+  // 'extends': [
+  //   'google',
+  // ],
   'globals': {
     'Atomics': 'readonly',
     'SharedArrayBuffer': 'readonly',
