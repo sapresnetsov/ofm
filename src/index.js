@@ -169,7 +169,7 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
     }
   }
 
-  children.forEach((child) => {
+  children.forEach((child, index) => {
     const childBlock = appendBlock(x, y, width, height, child, blocksMap, blockParamsMap, parentBlockParams);
     const childBlockParams = blockParamsMap.get(child.id);
     const childHeight = parseInt(childBlock.children[0].clientHeight);
@@ -198,7 +198,7 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
       childrenInlineCount++;
 
       // в один ряд выводится не больше n блоков
-      if (childrenInlineCount < inlineMaxCount) {
+      if (childrenInlineCount < inlineMaxCount && index !== children.length - 1) {
         if (!!shift[0] && child.children.length > 1) {
           x += shift[0] + H_SPACE_BETWEEN_BLOCKS + LEVEL_WIDTH_STEP / 2;
         } else {
@@ -451,7 +451,6 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   orgUnits.forEach((orgUnit, i) => {
     const orgUnitBlockParams = blockParamsMap.get(orgUnit.id);
     let tempOrgUnit;
-    // if (parent.otype === POSITION && orgUnits.length > 1 && i > 2 && orgUnitBlockParams.y !== orgUnitArea.y) {
     if (parent.otype === POSITION && orgUnits.length > 1 && orgUnitBlockParams.y !== orgUnitArea.y) {
       tempOrgUnit = {...orgUnitArea};
     }
@@ -589,6 +588,9 @@ const shiftChildBlocksDown = (parent, parentBlockParams, blocksMap, blockParamsM
       const childrenVerticalShift = getVerticalShiftFromChildren(child.children, blockParamsMap);
       if (deepestVerticalShift < childrenVerticalShift) {
         deepestVerticalShift = childrenVerticalShift;
+      }
+      if (deepestVerticalShift === 0) {
+        deepestVerticalShift = previousBottom + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
       }
       childKey += 1;
   });
