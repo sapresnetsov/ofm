@@ -103,7 +103,6 @@ export const drawScheme = () => {
   }
 
   drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
-  // отрисовка линий координации
 
   // отрисовка разеделителей областей с приписным штатом/ структурными подразделениями
   //TODO переделать/ скорректировать получение зон
@@ -451,7 +450,8 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   orgUnits.forEach((orgUnit, i) => {
     const orgUnitBlockParams = blockParamsMap.get(orgUnit.id);
     let tempOrgUnit;
-    if (parent.otype === POSITION && orgUnits.length > 1 && orgUnitBlockParams.y !== orgUnitArea.y) {
+    // if (parent.otype === POSITION && orgUnits.length > 1 && orgUnitBlockParams.y !== orgUnitArea.y) {
+    if (parent.otype === POSITION && orgUnitBlockParams.y !== orgUnitArea.y) {
       tempOrgUnit = {...orgUnitArea};
     }
     createUpsideDownConnector(root, linesMap, tempOrgUnit, parentBlockParams, orgUnitBlockParams, fromSide, toSide);
@@ -485,7 +485,11 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
       child.curation.forEach((curatedId) => {
         const curatedBlockParams = blockParamsMap.get(curatedId);
         if (curatedBlockParams) {
-          createUpsideDownConnector(root, linesMap, undefined, childBlockParams, curatedBlockParams, BOTTOM, TOP, true);
+          let curatedUnitArea;
+          if (curatedBlockParams.y !== orgUnitArea.y) {
+            curatedUnitArea= {...orgUnitArea};
+          }
+          createUpsideDownConnector(root, linesMap, curatedUnitArea, childBlockParams, curatedBlockParams, BOTTOM, TOP, true);
         }
       });
     }
