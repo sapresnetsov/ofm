@@ -208,8 +208,8 @@ export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false
 
 /**
  * Добавление блока
- * @param {number} x
- * @param {number} y
+ * @param {number} left
+ * @param {number} top
  * @param {number} width
  * @param {number} height
  * @param {Object} child
@@ -219,10 +219,10 @@ export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false
  * @param {Boolean} [isRootChild]
  * @return {HTMLElement}
  */
-export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMap, parentParams, isRootChild) => {
+export const appendBlock = (left, top, width, height, child, blocksMap, blockParamsMap, parentParams, isRootChild) => {
   const blockType = child.type || 'default';
   const blockLevel = child.level || 'default';
-  const initialBlockParams = [x, y, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
+  const initialBlockParams = [left, top, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
   const childBlock = createBlock(...initialBlockParams);
   root.appendChild(childBlock);
   // подбор высоты
@@ -242,7 +242,7 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
  *  ofmDataStr: string,
  *  ofmTitle: string,
  *  ofmStampStr: string,
- *  maxDepth: string,
+ *  maxDepth: number,
  *  drawSeparators: boolean,
  *  saveToDom: boolean,
  *  toImage: boolean,
@@ -254,7 +254,7 @@ export const getDataFromDOM = () => {
   const ofmDataStr = getDomValue('ofmData');
   const ofmTitle = getDomValue('ofmTitle');
   const ofmStampStr = getDomValue('ofmStamp');
-  const maxDepth = getDomValue('maxDepth');
+  const maxDepth = parseInt(getDomValue('maxDepth'), 10) | 1;
   const drawSeparators = getDomValue('drawSeparators') === 'true';
   const saveToDom = getDomValue('saveToDom') === 'true';
   const toImage = getDomValue('toImage') === 'true';
@@ -648,67 +648,6 @@ export const getFullWidthHeight = (parent, blockParamsMap, structuralUnitsAreaMa
   return {fullWidth, fullHeight}
 };
 
-/**
- * Отрисовка блока штампа
- * @param {Number} x
- * @param {Number} y
- * @param {Number} width
- * @param {String} name
- * @param {Array} properties
- * @return {HTMLElement}
- */
-export const createStampBlock = (x, y, width, name, properties) => {
-  const outerBlock = document.createElement(`div`);
-  outerBlock.setAttribute(`class`, `stamp_block`);
-  outerBlock.style.left = `${x}px`;
-  outerBlock.style.top = `${y}px`;
-  outerBlock.style.width = `${width}px`;
-  outerBlock.style.borderWidth = `1px`;
-
-  root.appendChild(outerBlock);
-
-  const titleBlock = document.createElement(`div`);
-  titleBlock.setAttribute(`class`, `name_block`);
-  titleBlock.textContent = name;
-  titleBlock.style.width = `${width}px`;
-  outerBlock.appendChild(titleBlock);
-
-  const rowHeight = 20;
-  let top = titleBlock.clientHeight + 10;
-  properties.forEach((prop) => {
-    const rowBlock = document.createElement(`div`);
-    rowBlock.setAttribute(`class`, `property_block`);
-    rowBlock.style.width = `${width}px`;
-    rowBlock.style.height = `${rowHeight}px`;
-    rowBlock.style.top = `${top}px`;
-
-    const propNameBlock = document.createElement(`div`);
-    propNameBlock.style.width = `${width - 130}px`;
-
-    const propName = document.createElement(`p`);
-    propName.setAttribute(`class`, `prop_name prop`);
-    propName.textContent = prop.name;
-    propNameBlock.appendChild(propName);
-
-    const propValueBlock = document.createElement(`div`);
-    propValueBlock.style.left = `${width - 130}px`;
-    propValueBlock.style.width = `${130}px`;
-    const propValue = document.createElement(`p`);
-    propValue.setAttribute(`class`, `prop_value prop`);
-    propValue.textContent = prop.value;
-    propValueBlock.appendChild(propValue);
-
-    rowBlock.appendChild(propNameBlock);
-    rowBlock.appendChild(propValueBlock);
-
-    outerBlock.appendChild(rowBlock);
-
-    top += rowHeight;
-  });
-  outerBlock.bottom = top - y;
-  return outerBlock;
-};
-
 export const setExtId = (children, parentId) => {
   children.forEach((child) => {
     const newId = `${parentId}/${child.id}`;
@@ -761,13 +700,12 @@ export const getHorizontalShiftFromChildren = (children, blockParamsMap) => {
  * @return {*|number|number}
  */
 export const getVerticalShiftFromChildren = (children, blockParamsMap) => {
-
-  let currentVerticalShift = 0;
-  let maxChildrenVerticalShift = 0;
-
   if (!children.length) {
     return 0;
   }
+
+  let currentVerticalShift = 0;
+  let maxChildrenVerticalShift = 0;
 
   children.forEach((child) => {
     const childBlockParams = blockParamsMap.get(child.id);
@@ -799,13 +737,12 @@ export const getVerticalShiftFromChildren = (children, blockParamsMap) => {
  * @return {number}
  */
 export const getLowestLeftFromChildren = (children, blockParamsMap) => {
-
-  let currentLeft = 100000;
-  let lowestChildrenVerticalShift = 1000000;
-
   if (!children.length) {
     return 100000;
   }
+
+  let currentLeft = 100000;
+  let lowestChildrenVerticalShift = 1000000;
 
   children.forEach((child) => {
     const childBlockParams = blockParamsMap.get(child.id);

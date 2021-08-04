@@ -2,18 +2,27 @@ import './../public/style.css';
 import {
   AREA_SHIFT,
   ASSIGNED_STAFF,
-  BLOCK_LEVELS, BLOCK_TYPES, BORDER_WIDTH,
-  BOTTOM, GOVERNANCE, H_BLOCK_PADDING,
-  H_SPACE_BETWEEN_BLOCKS, LEFT,
-  LEVEL_WIDTH_STEP, MIN_BLOCK_WIDTH, ORG_UNIT, POSITION, RIGHT, STRUCTURAL_UNIT, TOP,
+  BLOCK_LEVELS,
+  BLOCK_TYPES,
+  BORDER_WIDTH,
+  BOTTOM, GOVERNANCE,
+  H_SPACE_BETWEEN_BLOCKS,
+  LEFT,
+  LEVEL_WIDTH_STEP,
+  MIN_BLOCK_WIDTH,
+  ORG_UNIT,
+  POSITION,
+  RIGHT,
+  STRUCTURAL_UNIT,
+  TOP,
   V_SPACE_BETWEEN_BLOCKS,
+  MIN_BLOCK_HEIGHT,
+  IND_HEIGHT,
+  STAMP_WIDTH
 } from './constants';
-import {MIN_BLOCK_HEIGHT} from './constants';
-import {IND_HEIGHT} from './constants';
 import {
   appendBlock,
   createLine,
-  createStampBlock,
   createUpsideDownConnector,
   getBlockParams,
   getChildrenBlocksAreas,
@@ -21,6 +30,10 @@ import {
   getHorizontalShiftFromChildren,
   getVerticalShiftFromChildren
 } from './utils';
+import {
+  drawStamp,
+  shiftStampRight
+} from "./stamp";
 import FileSaver from 'file-saver';
 import 'canvas-toBlob';
 
@@ -34,13 +47,7 @@ export const drawScheme = () => {
   const assignedStaffAreaMap = new Map();
   const structuralUnitsAreaMap = new Map();
 
-  // const root = document.getElementById('root');
-
-  let {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock} = getDataFromDOM();
-
-  if (!maxDepth) {
-    maxDepth = 1;
-  }
+  const {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock} = getDataFromDOM();
 
   if (!ofmDataStr) {
     return;
@@ -48,34 +55,39 @@ export const drawScheme = () => {
 
   const ofmData = JSON.parse(ofmDataStr.trim().replace(new RegExp('[\\n]+\\s\\s+', 'g'), ''));
 
-  let parent = ofmData[0];
-  if (deleteTechBlock) {
-    const techBlockDiv = document.getElementById('techBlock');
-    techBlockDiv.parentNode.removeChild(techBlockDiv);
-  }
+  // if (deleteTechBlock) {
+  //   const techBlockDiv = document.getElementById('techBlock');
+  //   techBlockDiv.parentNode.removeChild(techBlockDiv);
+  // }
 
-  const parentWidth = MIN_BLOCK_WIDTH + LEVEL_WIDTH_STEP * maxDepth;
-  const parY = 20;
-  const parentBlock = appendBlock(30, parY, parentWidth, MIN_BLOCK_HEIGHT, parent, blocksMap, blockParamsMap, {top: {y: 0}});
+  const parent = ofmData[0];
+  const parentTop = 20;
+  const parentBlock = appendBlock(30, 
+                                     parentTop,
+                                     MIN_BLOCK_WIDTH + LEVEL_WIDTH_STEP * maxDepth,
+                                     MIN_BLOCK_HEIGHT,
+                                     parent,
+                                     blocksMap,
+                                     blockParamsMap,
+                                     {top: {y: 0}});
 
   // отрисовка штампа схемы
   let stampBlock;
   if (ofmStampStr) {
     const ofmStamp = JSON.parse(ofmStampStr.trim().replace(new RegExp('[\\n]+\\s\\s+', 'g'), ''));
-    stampBlock = drawStamp(ofmStamp, parentWidth);
+    stampBlock = drawStamp(ofmStamp, STAMP_WIDTH);
 
-    if (parentBlock.children[0].clientHeight + parY < stampBlock.bottom) {
-      parentBlock.style.top = `${stampBlock.bottom - 2 * parY}px`;
+    if (parentBlock.children[0].clientHeight + parentTop < stampBlock.bottom) {
+      parentBlock.style.top = `${stampBlock.bottom - parentTop * 2}px`;
       blockParamsMap.set(parent.id, getBlockParams(parentBlock, parent, 0));
     }
   }
-
-  // отрисовка первого уровня
   let parentBlockParams = blockParamsMap.get(parent.id);
 
   // отрисовка блоков прямого подчинения
   drawChildBlocks(blocksMap, blockParamsMap, parent, parentBlockParams);
 
+  // зоны отрисованных блоков прямого подчинения
   const childrenBlocksAreas = getChildrenBlocksAreas(parent, blockParamsMap);
   childrenBlocksAreas.forEach((blockArea) => {
     governanceAreaMap.set(blockArea.id, blockArea);
@@ -93,20 +105,8 @@ export const drawScheme = () => {
 
   blockParamsMap.set(parent.id, getBlockParams(parentBlock, parent, 0));
   parentBlockParams = blockParamsMap.get(parent.id);
-  if (ofmStampStr) {
-    let newStampBlockLeft = fullWidth - parseInt(stampBlock.style.width) - 10;
-    if (newStampBlockLeft < parentBlockParams.x + parentWidth + 50) {
-      newStampBlockLeft = fullWidth / 2 - parentWidth / 2 + parentWidth + 50;
-    }
-    const stampBlockStyle = window.getComputedStyle(stampBlock.childNodes[stampBlock.childNodes.length - 1]);
-    parent.children.forEach((child) => {
-      const childBlockParams = blockParamsMap.get(child.id)
-      if (childBlockParams && childBlockParams.right.x > newStampBlockLeft && childBlockParams.y < parseInt(stampBlockStyle.top) + parseInt(stampBlockStyle.height)) {
-        newStampBlockLeft = childBlockParams.right.x + 50
-      }
-    });
-    stampBlock.style.left = `${newStampBlockLeft}px`;
-  }
+  // сдвиг штампа вправо
+  shiftStampRight(stampBlock, parent, parentBlockParams, fullWidth, blockParamsMap);
 
   drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
 
@@ -369,11 +369,11 @@ const drawStructuralUnitBlocks = ( blocksMap,
     const childBlockParams = blockParamsMap.get(child.id);
   //   отрисовка потомков
     const deepestVerticalShift = drawStructuralUnitBlocks( blocksMap,
-                                            blockParamsMap,
-                                            child,
-                                            childBlockParams,
-                                            governanceBlocksArea,
-                                            initialVerticalShift );
+                                                           blockParamsMap,
+                                                           child,
+                                                           childBlockParams,
+                                                           governanceBlocksArea,
+                                                           initialVerticalShift );
     // определение максимальной высоты сдвига
     if (deepestVerticalShift > verticalShiftFromChildren) {
       verticalShiftFromChildren = deepestVerticalShift;
@@ -486,18 +486,6 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
 
     createUpsideDownConnector(root, linesMap, parentArea, parentBlockParams, childBlockParams, fromSize, toSize);
     drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, child);
-    if (child.curation && child.curation.length > 0) {
-      child.curation.forEach((curatedId) => {
-        const curatedBlockParams = blockParamsMap.get(curatedId);
-        if (curatedBlockParams) {
-          let curatedUnitArea;
-          if (curatedBlockParams.y !== orgUnitArea.y) {
-            curatedUnitArea= {...orgUnitArea};
-          }
-          createUpsideDownConnector(root, linesMap, curatedUnitArea, childBlockParams, curatedBlockParams, BOTTOM, TOP, true);
-        }
-      });
-    }
   });
 
   // отрисовка линий к приписному штату
@@ -526,6 +514,20 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
     createUpsideDownConnector(root, linesMap, tempOrgUnit, parentBlockParams, structuralUnitParams, fromSide, toSide);
     drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, structuralUnits);
   });
+
+  // отрисовка линий курирования
+  if (parent.curation && parent.curation.length > 0) {
+    parent.curation.forEach((curatedId) => {
+      const curatedBlockParams = blockParamsMap.get(curatedId);
+      if (curatedBlockParams) {
+        let curatedUnitArea;
+        if (curatedBlockParams.y !== orgUnitArea.y) {
+          curatedUnitArea= {...orgUnitArea};
+        }
+        createUpsideDownConnector(root, linesMap, curatedUnitArea, parentBlockParams, curatedBlockParams, BOTTOM, TOP, true);
+      }
+    });
+  }
 };
 
 /**
@@ -736,43 +738,7 @@ const translateHTMLToCanvasToImage = ( root,
   });
 };
 
-/**
- * Отрисовка штампа в правом верхнем углу
- * @param {Object} stamp
- * @param {number} fullWidth
- * @return {HTMLElement}
- */
-const drawStamp = (stamp, fullWidth) => {
-  const width = 500;
-  const y = 20;
-  const x = fullWidth - width - 10;
 
-  let propArr = stamp.name.split('/');
-  const name = `${propArr[0]} ${propArr[1]}`;
-
-  const properties = [];
-  propArr = stamp.staff_hc.split('/');
-  let prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
-
-  propArr = stamp.np.split('/');
-  prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
-
-  propArr = stamp.nrp_all.split('/');
-  prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
-
-  propArr = stamp.nup_min.split('/');
-  prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
-
-  propArr = stamp.kzv_max.split('/');
-  prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
-
-  return createStampBlock(x, y, width, name, properties);
-};
 
 /**
  * Вывод блока на канву

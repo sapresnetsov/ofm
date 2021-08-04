@@ -65,3 +65,5 @@ export const V_SPACE_BETWEEN_BLOCKS = 30;
 export const LEVEL_WIDTH_STEP = 15;
 export const AREA_SHIFT = 20;
 
+export const STAMP_WIDTH = 550;
+
