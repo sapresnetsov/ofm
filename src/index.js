@@ -38,7 +38,7 @@ export const drawScheme = () => {
 
   let {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock} = getDataFromDOM();
 
-  if (! maxDepth) {
+  if (!maxDepth) {
     maxDepth = 1;
   }
 
@@ -47,7 +47,6 @@ export const drawScheme = () => {
   }
 
   const ofmData = JSON.parse(ofmDataStr.trim().replace(new RegExp('[\\n]+\\s\\s+', 'g'), ''));
-  // setExtId(ofmData, '');
 
   let parent = ofmData[0];
   if (deleteTechBlock) {
@@ -99,6 +98,13 @@ export const drawScheme = () => {
     if (newStampBlockLeft < parentBlockParams.x + parentWidth + 50) {
       newStampBlockLeft = fullWidth / 2 - parentWidth / 2 + parentWidth + 50;
     }
+    const stampBlockStyle = window.getComputedStyle(stampBlock.childNodes[stampBlock.childNodes.length - 1]);
+    parent.children.forEach((child) => {
+      const childBlockParams = blockParamsMap.get(child.id)
+      if (childBlockParams && childBlockParams.right.x > newStampBlockLeft && childBlockParams.y < parseInt(stampBlockStyle.top) + parseInt(stampBlockStyle.height)) {
+        newStampBlockLeft = childBlockParams.right.x + 50
+      }
+    });
     stampBlock.style.left = `${newStampBlockLeft}px`;
   }
 
@@ -118,7 +124,7 @@ export const drawScheme = () => {
 
   // формирование канвы для получения изображения
   if (toImage) {
-    translateHTMLToCanvasToImage(document.body, ofmTitle, fullWidth, fullHeight, blocksMap, blockParamsMap, linesMap);
+    translateHTMLToCanvasToImage(document.body, ofmTitle, fullWidth, fullHeight, blocksMap, blockParamsMap, linesMap, stampBlock);
   }
 
   if (toPdf) {
@@ -171,7 +177,7 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
   children.forEach((child, index) => {
     const childBlock = appendBlock(x, y, width, height, child, blocksMap, blockParamsMap, parentBlockParams);
     const childBlockParams = blockParamsMap.get(child.id);
-    const childHeight = parseInt(childBlock.children[0].clientHeight);
+    const childHeight = childBlock.children[0].clientHeight;
 
     // отрисовка потомков
     const shift = drawChildBlocks(blocksMap, blockParamsMap, child, childBlockParams);
@@ -450,7 +456,6 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   orgUnits.forEach((orgUnit, i) => {
     const orgUnitBlockParams = blockParamsMap.get(orgUnit.id);
     let tempOrgUnit;
-    // if (parent.otype === POSITION && orgUnits.length > 1 && orgUnitBlockParams.y !== orgUnitArea.y) {
     if (parent.otype === POSITION && orgUnitBlockParams.y !== orgUnitArea.y) {
       tempOrgUnit = {...orgUnitArea};
     }
@@ -521,23 +526,6 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
     createUpsideDownConnector(root, linesMap, tempOrgUnit, parentBlockParams, structuralUnitParams, fromSide, toSide);
     drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, structuralUnits);
   });
-
-  // отрисовка линий координации (пока доступно только для должностей и орг. единиц (не прип. штат и не СП))
-  // if (parent.otype === POSITION && parent.curation && parent.curation.length > 0) {
-  //   // const curatedBlocks = getCuratedBlocks(wholeStruct, parent.curation, blockParamsMap);
-  //   parent.curation.forEach((curatedId) => {
-  //     const curatedBlockParams = blockParamsMap.get(curatedId);
-  //
-  //     let parentArea;
-  //     if (curatedBlockParams.y !== orgUnitArea.y) {
-  //       parentArea = {...orgUnitArea};
-  //     }
-  //
-  //     if (curatedBlockParams) {
-  //       createUpsideDownConnector(root, linesMap, parentArea, parentBlockParams, curatedBlockParams, BOTTOM, TOP, true);
-  //     }
-  //   });
-  // }
 };
 
 /**
@@ -703,14 +691,23 @@ const saveBlockParamsMapToDOM = () => {
  * @param {Map} blocksMap
  * @param {Map} blockParamsMap
  * @param {Map} linesMap
+ * @param {HTMLElement} stampBlock
  */
-const translateHTMLToCanvasToImage = (root, ofmTitle, width, height, blocksMap, blockParamsMap, linesMap) => {
+const translateHTMLToCanvasToImage = ( root,
+                                       ofmTitle,
+                                       width,
+                                       height,
+                                       blocksMap,
+                                       blockParamsMap,
+                                       linesMap,
+                                       stampBlock ) => {
+
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
+  canvas.style.display = 'none';
 
   root.appendChild(canvas);
-  canvas.setAttribute('visibility', 'hidden');
 
   const ctx = canvas.getContext('2d');
   if (blockParamsMap) {
@@ -720,12 +717,15 @@ const translateHTMLToCanvasToImage = (root, ofmTitle, width, height, blocksMap, 
     });
   }
 
+  if (stampBlock) {
+    canvasDrawStamp(ctx, stampBlock.style, stampBlock.childNodes[0], stampBlock.childNodes);
+  }
+
   if (linesMap) {
     linesMap.forEach((line) => {
-      const nodesLength = line.length;
-      line.forEach((node, i) => {
-        if (i !== nodesLength - 1) {
-          canvasDrawLine(ctx, node, line[i+1]);
+      line.parts.forEach((part, i) => {
+        if (i !== line.parts.length - 1) {
+          canvasDrawLine(ctx, part, line.parts[i+1], line.lineStyle, line.lineColor);
         }
       });
     });
@@ -734,6 +734,44 @@ const translateHTMLToCanvasToImage = (root, ofmTitle, width, height, blocksMap, 
   canvas.toBlob((blob) => {
     FileSaver.saveAs(blob, `${ofmTitle}.png`);
   });
+};
+
+/**
+ * Отрисовка штампа в правом верхнем углу
+ * @param {Object} stamp
+ * @param {number} fullWidth
+ * @return {HTMLElement}
+ */
+const drawStamp = (stamp, fullWidth) => {
+  const width = 500;
+  const y = 20;
+  const x = fullWidth - width - 10;
+
+  let propArr = stamp.name.split('/');
+  const name = `${propArr[0]} ${propArr[1]}`;
+
+  const properties = [];
+  propArr = stamp.staff_hc.split('/');
+  let prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  propArr = stamp.np.split('/');
+  prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  propArr = stamp.nrp_all.split('/');
+  prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  propArr = stamp.nup_min.split('/');
+  prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  propArr = stamp.kzv_max.split('/');
+  prop = {name: propArr[0], value: propArr[1]};
+  properties.push(prop);
+
+  return createStampBlock(x, y, width, name, properties);
 };
 
 /**
@@ -786,15 +824,30 @@ const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPadding
   }
 
   // заголовок
-  let textY = y + borderWidth + title.paddingTop;
   const textX = x + innerPaddingLeft + borderWidth;
+  let textY = y + borderWidth + title.paddingTop;
   const textWidth = width - innerPaddingLeft - innerPaddingRight;
-  textY = rectDrawText(ctx, textX, textY, textWidth, innerPaddingLeft, innerPaddingRight, 0, title);
+  const titleTextObject = {...title, height: !functions.length ? height - IND_HEIGHT - title.height: title.height }
+  textY = rectDrawText( ctx,
+                        textX,
+                        textY,
+                        textWidth,
+                        innerPaddingLeft,
+                        innerPaddingRight,
+                        0,
+                        titleTextObject);
 
   // Функции
   if (functions.length > 1) {
     functions.forEach((func) => {
-      textY = rectDrawText(ctx, textX, textY, textWidth, innerPaddingLeft, innerPaddingRight, 4, func);
+      textY = rectDrawText( ctx,
+                            textX,
+                            textY,
+                            textWidth,
+                            innerPaddingLeft,
+                            innerPaddingRight,
+                            4,
+                            func);
     });
   }
 
@@ -819,15 +872,27 @@ const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPadding
   }
 };
 
-const rectDrawText = (ctx, blockX, blockY, width, paddingLeft, paddingRight, lineSpacing, textObject) => {
+/**
+ *
+ * @param ctx
+ * @param left
+ * @param top
+ * @param width
+ * @param paddingLeft
+ * @param paddingRight
+ * @param lineSpacing
+ * @param textObject
+ * @return {*}
+ */
+const rectDrawText = (ctx, left, top, width, paddingLeft, paddingRight, lineSpacing, textObject) => {
   const words = textObject.text.split(' ');
   const maxWidth = width;
-  const textX = blockX + Math.trunc(maxWidth / 2);
+  const textX = left + Math.trunc(maxWidth / 2);
   let line = '';
-  let textY = blockY + Math.trunc(textObject.paddingTop * 2 + textObject.height / 2);
+  let textY = top + Math.trunc(textObject.paddingTop * 2 + textObject.height / 2);
 
   ctx.fillStyle = 'black';
-  ctx.textAlign = 'center';
+  ctx.textAlign = textObject.textAlign;
   ctx.textBaseline = 'middle';
   ctx.font = textObject.font;
   words.forEach((word) => {
@@ -848,51 +913,121 @@ const rectDrawText = (ctx, blockX, blockY, width, paddingLeft, paddingRight, lin
   return textY;
 };
 
-const canvasDrawLine = (ctx, pointFrom, pointTo) => {
+/**
+ * Отрисовка линии
+ * @param ctx
+ * @param pointFrom
+ * @param pointTo
+ * @param lineStyle
+ * @param lineColor
+ */
+const canvasDrawLine = (ctx, pointFrom, pointTo, lineStyle, lineColor) => {
   ctx.beginPath();
   ctx.moveTo(pointFrom.x + 0.5, pointFrom.y + 0.5);
   ctx.lineTo(pointTo.x + 0.5, pointTo.y + 0.5);
-  ctx.fillStyle = 'black';
+  ctx.strokeStyle = lineColor;
   ctx.lineWidth = 1;
+  if (lineStyle !== 'solid') {
+    ctx.setLineDash([5, 5]);
+  }
   ctx.stroke();
 };
 
 /**
- * Отрисовка штампа в правом верхнем углу
- * @param {Object} stamp
- * @param {number} fullWidth
- * @return {HTMLElement}
+ *
+ * @param ctx
+ * @param left
+ * @param top
+ * @param textObject
+ * @return {*}
  */
-const drawStamp = (stamp, fullWidth) => {
-  const width = 500;
-  const y = 20;
-  const x = fullWidth - width - 10;
+const stampDrawTitle = (ctx, left, top, textObject) => {
+  ctx.fillStyle = 'black';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = textObject.font;
+  ctx.fillText(textObject.text, left, top);
 
-  let propArr = stamp.name.split('/');
-  const name = `${propArr[0]} ${propArr[1]}`;
+  return top + textObject.height + textObject.paddingBottom;
+}
 
-  const properties = [];
-  propArr = stamp.staff_hc.split('/');
-  let prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
+/**
+ *
+ * @param ctx
+ * @param left
+ * @param top
+ * @param propNameObject
+ * @param propValueObject
+ * @return {*}
+ */
+const stampDrawProp = (ctx, left, top, propNameObject, propValueObject) => {
+  let textLeft = left;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = propNameObject.font;
+  ctx.fillText(propNameObject.text, textLeft, top);
 
-  propArr = stamp.np.split('/');
-  prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
+  textLeft += propNameObject.width;
+  ctx.textAlign = 'left';
+  ctx.font = propValueObject.font;
+  ctx.fillText(propValueObject.text, textLeft, top);
 
-  propArr = stamp.nrp_all.split('/');
-  prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
-
-  propArr = stamp.nup_min.split('/');
-  prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
-
-  propArr = stamp.kzv_max.split('/');
-  prop = {name: propArr[0], value: propArr[1]};
-  properties.push(prop);
-
-  return createStampBlock(x, y, width, name, properties);
+  return top + propNameObject.height + propNameObject.paddingBottom
 };
+
+/**
+ *
+ * @param ctx
+ * @param stampStyle
+ * @param stampTitle
+ * @param stampRows
+ */
+const canvasDrawStamp = (ctx, stampStyle, stampTitle, stampRows) => {
+  ctx.beginPath();
+  const textX = parseInt(stampStyle.left);
+  let textY = parseInt(stampStyle.top);
+  const titleStyle = window.getComputedStyle(stampTitle);
+  const titleObject = {
+    font: `${titleStyle.fontSize} ${titleStyle.fontFamily}`,
+    text: stampTitle.textContent,
+    height: parseInt(titleStyle.height, 10),
+    paddingTop: parseInt(titleStyle.paddingTop, 10),
+    paddingBottom: parseInt(titleStyle.paddingBottom, 10),
+    textAlign: 'left'
+  };
+  textY = stampDrawTitle( ctx,
+                          textX,
+                          textY,
+                          titleObject );
+  stampRows.forEach((stampRow, index) => {
+    if (index > 0) {
+      const propNameStyle = window.getComputedStyle(stampRow.childNodes[0])
+      const propNameObject = {
+        font: `bold ${propNameStyle.fontSize} ${propNameStyle.fontFamily}`,
+        text: stampRow.childNodes[0].textContent,
+        width: parseInt(propNameStyle.width, 10),
+        height: parseInt(propNameStyle.height, 10),
+        paddingTop: parseInt(propNameStyle.paddingTop, 10),
+        paddingBottom: parseInt(propNameStyle.paddingBottom, 10),
+      };
+      const propValueStyle = window.getComputedStyle(stampRow.childNodes[1])
+      const propValueObject = {
+        font: `${propValueStyle.fontSize} ${propValueStyle.fontFamily}`,
+        text: stampRow.childNodes[1].textContent,
+        width: parseInt(propValueStyle.width, 10),
+        height: parseInt(propValueStyle.height, 10),
+        paddingTop: parseInt(propValueStyle.paddingTop, 10),
+        paddingBottom: parseInt(propValueStyle.paddingBottom, 10),
+      };
+      textY = stampDrawProp( ctx,
+          textX,
+          textY,
+          propNameObject,
+          propValueObject);
+    }
+  });
+};
+
+
 
 drawScheme();

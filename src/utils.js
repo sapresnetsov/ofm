@@ -134,7 +134,6 @@ export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false
   const innerPaddingLeft = parseInt(block.children[0].style.paddingLeft, 10);
   const innerPaddingRight = parseInt(block.children[0].style.paddingRight, 10);
   const innerBlockStyle = window.getComputedStyle(block.children[0]);
-  // const indicatorsBlockStyle = window.getComputedStyle(block.children[1]);
   // заголовок
   const titleTag = block.children[0].children[0];
   const titleStyle = window.getComputedStyle(titleTag);
@@ -147,6 +146,7 @@ export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false
     paddingBottom: parseInt(titleStyle.paddingBottom, 10),
     paddingLeft: parseInt(titleStyle.paddingLeft, 10),
     paddingRight: parseInt(titleStyle.paddingRight, 10),
+    textAlign: 'center'
   };
   // функции
   let functions = [];
@@ -162,6 +162,7 @@ export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false
         height: funcHeight,
         paddingTop: parseInt(funcStyle.paddingTop, 10),
         paddingBottom: parseInt(funcStyle.paddingBottom, 10),
+        textAlign: 'center'
       };
     });
   }
@@ -337,7 +338,14 @@ export const createLine = (root, startPoint, endPoint, lineType, lineStyle='soli
  * @param {string} toSide
  * @param {Boolean} [curationLine]
  */
-export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom, blockTo, fromSide, toSide, curationLine) => {
+export const createUpsideDownConnector = ( root,
+                                           linesMap,
+                                           orgUnitArea,
+                                           blockFrom,
+                                           blockTo,
+                                           fromSide,
+                                           toSide,
+                                           curationLine) => {
   const fromPoint = getPointOfSide(blockFrom, fromSide);
 
   if (!blockTo) {
@@ -348,7 +356,7 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
   const key = blockFrom.id + '/' + blockTo.id;
 
   let lineStyle = 'solid';
-  let lineColor;
+  let lineColor = 'black';
 
   let stdNodeShift = 20;
   let curationShift = 0;
@@ -363,50 +371,91 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     if (Math.abs(fromPoint.x - toPoint.x) < 5 && (!orgUnitArea || orgUnitArea.width === 0)) {
       toPoint.x += (fromPoint.x - toPoint.x);
       createLine(root, fromPoint, toPoint, 'v');
-      linesMap.set(key, [
-        {...fromPoint},
-        {...toPoint},
-        ]);
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
       return;
     }
     // точки соединения смещены относительно друг-друга
     if (!orgUnitArea) {
+      let partsCount = 3;
       if (curationLine) {
-        // TODO
         if (fromPoint.x > toPoint.x) {
-          fromPoint.x -= 10;
-          toPoint.x += 10;
+          fromPoint.x -= 5;
+          toPoint.x += 5;
         } else if (fromPoint.x < toPoint.x) {
-          fromPoint.x += 10;
-          toPoint.x -= 10;
+          fromPoint.x += 5;
+          toPoint.x -= 5;
         }
 
         if (Math.abs(fromPoint.x - toPoint.x) < 5 && toPoint.y === orgUnitArea.y ) {
           toPoint.x += (fromPoint.x - toPoint.x);
           createLine(root, fromPoint, toPoint, 'v', lineStyle, lineColor);
-          linesMap.set(key, [
-            {...fromPoint},
-            {...toPoint},
-          ]);
+          linesMap.set(key, {
+            parts:
+                [
+                  {...fromPoint},
+                  {...toPoint}
+                ],
+            lineStyle: lineStyle,
+            lineColor: lineColor
+          });
           return;
         }
-        fromPoint.x += 10;
-        toPoint.x += 10;
+        fromPoint.x += 5;
+        toPoint.x += 5;
       }
-      // ломаная линия из трех звеньев
+
       const yMiddle = toPoint.y - stdNodeShift;
-      const parMidPoint = getPoint(fromPoint.x, yMiddle);
+      let parMidPoint = getPoint(fromPoint.x, yMiddle);
       const childMidPoint = getPoint(toPoint.x + curationShift, yMiddle);
       const endPoint = getPoint(toPoint.x + curationShift, toPoint.y);
-      createLine(root, fromPoint, parMidPoint, 'v', lineStyle, lineColor);
-      createLine(root, parMidPoint, childMidPoint, 'h', lineStyle, lineColor);
-      createLine(root, childMidPoint, endPoint, 'v', lineStyle, lineColor);
-      linesMap.set(key, [
-        {...fromPoint},
-        {...parMidPoint},
-        {...childMidPoint},
-        {...endPoint},
-        ]);
+      // если линия проходит через блок, то нужно его обойти
+      if (parMidPoint.y >= fromPoint.y) {
+        createLine(root, fromPoint, parMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parMidPoint, childMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, childMidPoint, endPoint, 'v', lineStyle, lineColor);
+        linesMap.set(key, {
+          parts:
+              [
+                {...fromPoint},
+                {...parMidPoint},
+                {...childMidPoint},
+                {...endPoint},
+              ],
+          lineStyle: lineStyle,
+          lineColor: lineColor
+        });
+      } else {
+        const parVertMidPoint = getPoint(fromPoint.x, fromPoint.y + IND_HEIGHT + 5);
+        const parHorMidPoint = getPoint(blockFrom.right.x + curationShift, parVertMidPoint.y);
+        let parMidPoint = getPoint(parHorMidPoint.x, yMiddle);
+        createLine(root, fromPoint, parVertMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parVertMidPoint, parHorMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, parHorMidPoint, parMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parMidPoint, childMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, childMidPoint, endPoint, 'v', lineStyle, lineColor);
+        linesMap.set(key, {
+          parts:
+              [
+                {...fromPoint},
+                {...parVertMidPoint},
+                {...parHorMidPoint},
+                {...parMidPoint},
+                {...childMidPoint},
+                {...endPoint},
+              ],
+          lineStyle: lineStyle,
+          lineColor: lineColor
+        });
+      }
+
     } else {
       if (curationLine) {
         fromPoint.x -= 10;
@@ -414,10 +463,15 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
         if (Math.abs(fromPoint.x - toPoint.x) < 5 && toPoint.y === orgUnitArea.y ) {
           toPoint.x += (fromPoint.x - toPoint.x);
           createLine(root, fromPoint, toPoint, 'v', lineStyle, lineColor);
-          linesMap.set(key, [
-            {...fromPoint},
-            {...toPoint},
-          ]);
+          linesMap.set(key, {
+            parts:
+                [
+                  {...fromPoint},
+                  {...toPoint},
+                ],
+            lineStyle: lineStyle,
+            lineColor: lineColor
+          });
           return;
         }
       }
@@ -431,14 +485,19 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
       createLine(root, topLeftAreaPoint, bottomLeftAreaPoint, 'v', lineStyle, lineColor);
       createLine(root, bottomLeftAreaPoint, bottomAreaPoint, 'h', lineStyle, lineColor);
       createLine(root, bottomAreaPoint, toPoint, 'v', lineStyle, lineColor);
-      linesMap.set(key, [
-        {...fromPoint},
-        {...topAreaPoint},
-        {...topLeftAreaPoint},
-        {...bottomLeftAreaPoint},
-        {...bottomAreaPoint},
-        {...toPoint},
-        ]);
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...topAreaPoint},
+              {...topLeftAreaPoint},
+              {...bottomLeftAreaPoint},
+              {...bottomAreaPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
     }
   }
 
@@ -468,12 +527,17 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
       createLine(root, fromPoint, parMidPoint, 'h');
       createLine(root, parMidPoint, childMidPoint, 'v');
       createLine(root, childMidPoint, toPoint, 'h');
-      linesMap.set(key, [
-        {...fromPoint},
-        {...parMidPoint},
-        {...childMidPoint},
-        {...toPoint},
-        ]);
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...parMidPoint},
+              {...childMidPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
     }
   }
 
@@ -481,10 +545,15 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
     if (Math.abs(fromPoint.y - toPoint.y) < 15) {
       toPoint.y += (fromPoint.y - toPoint.y);
       createLine(root, fromPoint, toPoint, 'h');
-      linesMap.set(key, [
-        {...fromPoint},
-        {...toPoint},
-        ]);
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
       return;
     }
     // блок снизу и правее
@@ -494,12 +563,17 @@ export const createUpsideDownConnector = (root, linesMap, orgUnitArea, blockFrom
       createLine(root, fromPoint, parMidPoint, 'h');
       createLine(root, parMidPoint, childMidPoint, 'v');
       createLine(root, childMidPoint, toPoint, 'h');
-      linesMap.set(key, [
-        {...fromPoint},
-        {...parMidPoint},
-        {...childMidPoint},
-        {...toPoint},
-        ]);
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...parMidPoint},
+              {...childMidPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
     }
   }
 };
@@ -589,44 +663,43 @@ export const createStampBlock = (x, y, width, name, properties) => {
   outerBlock.style.left = `${x}px`;
   outerBlock.style.top = `${y}px`;
   outerBlock.style.width = `${width}px`;
-  // outerBlock.style.height = `100px`;
   outerBlock.style.borderWidth = `1px`;
 
   root.appendChild(outerBlock);
 
-  const nameBlock = document.createElement(`div`);
-  nameBlock.setAttribute(`class`, `name_block`);
-  nameBlock.textContent = name;
-  nameBlock.style.width = `${width}px`;
-  outerBlock.appendChild(nameBlock);
+  const titleBlock = document.createElement(`div`);
+  titleBlock.setAttribute(`class`, `name_block`);
+  titleBlock.textContent = name;
+  titleBlock.style.width = `${width}px`;
+  outerBlock.appendChild(titleBlock);
 
   const rowHeight = 20;
-  let top = nameBlock.clientHeight + 10;
+  let top = titleBlock.clientHeight + 10;
   properties.forEach((prop) => {
     const rowBlock = document.createElement(`div`);
+    rowBlock.setAttribute(`class`, `property_block`);
     rowBlock.style.width = `${width}px`;
     rowBlock.style.height = `${rowHeight}px`;
     rowBlock.style.top = `${top}px`;
 
-    const nameBlock = document.createElement(`div`);
-    nameBlock.style.width = `${width-130}px`;
-
-    const valueBlock = document.createElement(`div`);
-    valueBlock.style.left = `${width-130}px`;
-    valueBlock.style.width = `${130}px`;
+    const propNameBlock = document.createElement(`div`);
+    propNameBlock.style.width = `${width - 130}px`;
 
     const propName = document.createElement(`p`);
     propName.setAttribute(`class`, `prop_name prop`);
     propName.textContent = prop.name;
-    nameBlock.appendChild(propName);
+    propNameBlock.appendChild(propName);
 
+    const propValueBlock = document.createElement(`div`);
+    propValueBlock.style.left = `${width - 130}px`;
+    propValueBlock.style.width = `${130}px`;
     const propValue = document.createElement(`p`);
     propValue.setAttribute(`class`, `prop_value prop`);
     propValue.textContent = prop.value;
-    valueBlock.appendChild(propValue);
+    propValueBlock.appendChild(propValue);
 
-    rowBlock.appendChild(nameBlock);
-    rowBlock.appendChild(valueBlock);
+    rowBlock.appendChild(propNameBlock);
+    rowBlock.appendChild(propValueBlock);
 
     outerBlock.appendChild(rowBlock);
 
