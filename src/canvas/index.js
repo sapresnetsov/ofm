@@ -1,4 +1,4 @@
-import { BORDER_WIDTH } from "../constants";
+import { BORDER_WIDTH } from "../model/constants";
 
 /**
  * Перевод HTML на канву

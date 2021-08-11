@@ -17,6 +17,10 @@ export const BLOCK_LEVELS = {
   dependent: 'dependent',
   default: 'default',
 };
+export const OTYPES = {
+  POSITION: 'S',
+  ORG_UNIT: 'O',
+};
 
 // pt -> px
 export const BORDER_WIDTH = {
@@ -40,12 +44,11 @@ export const BACKGROUND_COLOR = {
   ind: `#ffffca`,
 };
 
-export const POSITION = 'S';
-export const ORG_UNIT = 'O';
-
-export const GOVERNANCE = 'U';
-export const ASSIGNED_STAFF = 'X';
-export const STRUCTURAL_UNIT = 'S';
+export const ADDITIONAL_INFO = {
+  GOVERNANCE: 'U',
+  ASSIGNED_STAFF: 'X',
+  STRUCTURAL_UNIT: 'S',
+};
 
 export const TOP = `top`;
 export const BOTTOM = `bottom`;

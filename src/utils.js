@@ -1,13 +1,21 @@
 /* eslint-disable indent */
 // отрисовка орг. блока
 import {
-  BACKGROUND_COLOR, BLOCK_TYPES,
-  BORDER_WIDTH, BOTTOM, GOVERNANCE,
+  ADDITIONAL_INFO,
+  BACKGROUND_COLOR,
+  BLOCK_LEVELS,
+  BLOCK_TYPES,
+  BORDER_WIDTH,
+  BOTTOM,
   H_BLOCK_PADDING,
   IND_HEIGHT,
-  IND_WIDTH, LEFT,
-  MIN_BLOCK_HEIGHT, POSITION, RIGHT, TOP, V_SPACE_BETWEEN_BLOCKS,
-} from './constants';
+  IND_WIDTH,
+  LEFT,
+  MIN_BLOCK_HEIGHT,
+  RIGHT,
+  TOP,
+  V_SPACE_BETWEEN_BLOCKS,
+} from './model/constants';
 
 /**
  * Создания блока
@@ -22,7 +30,15 @@ import {
  * @param {any[]} indicators
  * @return {HTMLElement}
  */
-export const createBlock = (x, y, width, height, blockType='default', blockLevel='default', title, functions, indicators) => {
+export const createBlock = ( x,
+                             y,
+                             width,
+                             height,
+                             blockType=BLOCK_TYPES.default,
+                             blockLevel=BLOCK_LEVELS.default,
+                             title,
+                             functions,
+                             indicators) => {
   const outerBlock = document.createElement(`div`);
   outerBlock.setAttribute(`class`, `outer_block`);
   outerBlock.style.left = `${x}px`;
@@ -124,7 +140,10 @@ export const getPoint = (pX, pY) => {
  * @param {Boolean} [isRootChild]
  * @return {BlockParams}
  */
-export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false) => {
+export const getBlockParams = ( block,
+                                ofmValue,
+                                nearParentTop,
+                                isRootChild=false) => {
   const left = parseInt(block.style.left, 10);
   const top = parseInt(block.style.top, 10);
   const width = parseInt(block.style.width, 10);
@@ -196,12 +215,12 @@ export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false
     left: getPoint(left, top + height / 2),
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
     nearParentTop: nearParentTop,
-    additionalInfo: ofmValue.additionalInfo,
-    isRootChild: isRootChild,
     backgroundColor: innerBlockStyle.backgroundColor,
+    isRootChild: isRootChild,
     id: ofmValue.id,
     title: title,
     functions: functions,
+    additionalInfo: ofmValue.additionalInfo,
     indicators: indicators,
   };
 };
@@ -648,6 +667,11 @@ export const getFullWidthHeight = (parent, blockParamsMap, structuralUnitsAreaMa
   return {fullWidth, fullHeight}
 };
 
+/**
+ *
+ * @param {OFMData[]} children
+ * @param {string} parentId
+ */
 export const setExtId = (children, parentId) => {
   children.forEach((child) => {
     const newId = `${parentId}/${child.id}`;
@@ -658,8 +682,8 @@ export const setExtId = (children, parentId) => {
 
 /**
  *
- * @param children
- * @param blockParamsMap
+ * @param {OFMData[]} children
+ * @param {Map} blockParamsMap
  * @return {number}
  */
 export const getHorizontalShiftFromChildren = (children, blockParamsMap) => {
@@ -695,8 +719,8 @@ export const getHorizontalShiftFromChildren = (children, blockParamsMap) => {
 
 /**
  *
- * @param children
- * @param blockParamsMap
+ * @param {OFMData[]} children
+ * @param {Map} blockParamsMap
  * @return {*|number|number}
  */
 export const getVerticalShiftFromChildren = (children, blockParamsMap) => {
@@ -713,27 +737,18 @@ export const getVerticalShiftFromChildren = (children, blockParamsMap) => {
     if (!!childBlockParams) {
       const childrenVerticalShift = getVerticalShiftFromChildren(child.children, blockParamsMap);
       maxChildrenVerticalShift = Math.max(maxChildrenVerticalShift, childrenVerticalShift);
-      // if (maxChildrenVerticalShift < childrenVerticalShift) {
-      //   maxChildrenVerticalShift = childrenVerticalShift;
-      // }
       currentVerticalShift = Math.max(currentVerticalShift, childBlockParams.bottom.y);
-      // if (currentVerticalShift < childBlockParams.bottom.y) {
-      //   currentVerticalShift = childBlockParams.bottom.y;
-      // }
     }
   });
   maxChildrenVerticalShift = Math.max(maxChildrenVerticalShift, currentVerticalShift);
-  // if (maxChildrenVerticalShift > currentVerticalShift) {
-  //   currentVerticalShift = maxChildrenVerticalShift;
-  // }
 
   return currentVerticalShift;
 };
 
 /**
  *
- * @param children
- * @param blockParamsMap
+ * @param {OFMData[]} children
+ * @param {Map} blockParamsMap
  * @return {number}
  */
 export const getLowestLeftFromChildren = (children, blockParamsMap) => {
@@ -750,29 +765,19 @@ export const getLowestLeftFromChildren = (children, blockParamsMap) => {
     if (!!childBlockParams) {
       const childrenLeft = getLowestLeftFromChildren(child.children, blockParamsMap);
       lowestChildrenLeft = Math.min(lowestChildrenLeft, childrenLeft);
-      // if (lowestChildrenVerticalShift > childrenLeft) {
-      //   lowestChildrenVerticalShift = childrenLeft;
-      // }
-
       currentLeft = Math.min(currentLeft, childBlockParams.left.x);
-      // if (currentLeft > childBlockParams.left.x) {
-      //   currentLeft = childBlockParams.left.x;
-      // }
     }
   });
   currentLeft = Math.min(currentLeft, lowestChildrenLeft);
-  // if (lowestChildrenLeft < currentLeft) {
-  //   currentLeft = lowestChildrenLeft;
-  // }
 
   return currentLeft;
 };
 
 /**
  *
- * @param parent
- * @param blockParamsMap
- * @return {Map}
+ * @param {OFMData} parent
+ * @param {Map} blockParamsMap
+ * @return {Map[]}
  */
 export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
 
@@ -788,7 +793,6 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
     const notDeputy = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy);
 
     let deputyBottomY = getVerticalShiftFromChildren(deputy, blockParamsMap);
-    // let deputyRightX = getHorizontalShiftFromChildren(deputy, blockParamsMap);
 
     const firstNotDeputy = notDeputy[0] ? blockParamsMap.get(notDeputy[0].id) : undefined;
     let notDeputyBottomY = getVerticalShiftFromChildren(notDeputy, blockParamsMap);
@@ -803,13 +807,12 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
 
     childrenBlocksAreas.push(childrenBlocksArea);
     parent.children
-      .filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === GOVERNANCE)
+      .filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE)
       .forEach((child) => {
-
-      const nestedChildrenBlockAreas = getChildrenBlocksAreas(child, blockParamsMap);
-      if (nestedChildrenBlockAreas.length > 0) {
-         childrenBlocksAreas = [...childrenBlocksAreas, ...nestedChildrenBlockAreas];
-      }
+        const nestedChildrenBlockAreas = getChildrenBlocksAreas(child, blockParamsMap);
+        if (nestedChildrenBlockAreas.length > 0) {
+           childrenBlocksAreas = [...childrenBlocksAreas, ...nestedChildrenBlockAreas];
+        }
     });
   }
 
@@ -818,7 +821,7 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
 
 /**
  *
- * @param parent
+ * @param {OFMData} parent
  * @param additionalInfo
  */
 export const getChildrenByAdditionalInfo = (parent, additionalInfo) => {
