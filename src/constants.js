@@ -55,7 +55,6 @@ export const RIGHT = `right`;
 export const MIN_BLOCK_WIDTH = 250;
 export const MAX_BLOCK_WIDTH = 300;
 export const MIN_BLOCK_HEIGHT = 100;
-export const MAX_BLOCK_HEIGHT = 100;
 export const IND_HEIGHT = 15;
 export const IND_WIDTH = 40;
 // при задании величины необходимо учитывать padding внутри блоков

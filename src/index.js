@@ -4,7 +4,6 @@ import {
   ASSIGNED_STAFF,
   BLOCK_LEVELS,
   BLOCK_TYPES,
-  BORDER_WIDTH,
   BOTTOM, GOVERNANCE,
   H_SPACE_BETWEEN_BLOCKS,
   LEFT,
@@ -48,7 +47,7 @@ export const drawScheme = () => {
   const assignedStaffAreaMap = new Map();
   const structuralUnitsAreaMap = new Map();
 
-  const {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock} = getDataFromDOM();
+  const {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, submitToImage} = getDataFromDOM();
 
   if (!ofmDataStr) {
     return;
@@ -108,7 +107,7 @@ export const drawScheme = () => {
 
   blockParamsMap.set(parent.id, getBlockParams(parentBlock, parent, 0));
   parentBlockParams = blockParamsMap.get(parent.id);
-  // сдвиг штампа вправо
+  // сдвиг штампа в правый угол
   shiftStampRight(stampBlock, parent, parentBlockParams, fullWidth, blockParamsMap);
 
   drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
@@ -128,12 +127,29 @@ export const drawScheme = () => {
   // формирование канвы для получения изображения
   if (toImage) {
     const canvas = translateHTMLToCanvas(document.body, ofmTitle, fullWidth, fullHeight, blocksMap, blockParamsMap, linesMap, stampBlock);
-    canvas.toBlob((blob) => {
-      FileSaver.saveAs(blob, `${ofmTitle}.png`);
-    });
+    if (!submitToImage) {
+      canvas.toBlob((blob) => {
+        FileSaver.saveAs(blob, `${ofmTitle}.png`);
+      });
+    } else {
+      createSubmitToImageButton(() => canvas.toBlob((blob) => {
+        let URLObj = window.URL || window.webkitURL;
+        let a = document.createElement("a");
+        a.href = URLObj.createObjectURL(blob);
+        a.download = `${ofmTitle}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }));
+    }
+
   }
 
   if (toPdf) {
+
+  }
+
+  if (submitToImage) {
 
   }
 };
@@ -470,7 +486,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
     return;
   }
   const orgUnits = parent.children.filter((child) => child.otype === ORG_UNIT && child.additionalInfo === GOVERNANCE);
-  orgUnits.forEach((orgUnit, i) => {
+  orgUnits.forEach((orgUnit) => {
     const orgUnitBlockParams = blockParamsMap.get(orgUnit.id);
     let tempOrgUnit;
     if (parent.otype === POSITION && orgUnitBlockParams.y !== orgUnitArea.y) {
@@ -557,37 +573,51 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
  * @param {number} childInlineCount
  */
 const shiftChildBlocksDown = (parent, parentBlockParams, blocksMap, blockParamsMap, deputyBottom, childInlineCount) => {
+  const verticalSpaceBetweenBlocks = V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+  // TODO возможно лишняя переменная
   let previousBottom = 0;
+  let previousMaxBottom = 0;
   let deepestVerticalShift = 0;
   let previousDeepestVerticalShift = 0;
   let takeVerticalShift;
   let childKey = 0;
+  let previousLineVerticalShift = 0;
 
   parent.children
     .filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === GOVERNANCE)
     .forEach((child, key) => {
       const childBlock = blocksMap.get(child.id);
       takeVerticalShift = key >= childInlineCount;
-      let newTopY = 0;
+      let newTopY;
       if (childKey >= childInlineCount) {
         childKey = 0;
         previousDeepestVerticalShift = deepestVerticalShift;
+        if (previousLineVerticalShift === deepestVerticalShift) {
+          previousDeepestVerticalShift = previousMaxBottom;
+        }
+        previousLineVerticalShift = deepestVerticalShift;
+        previousMaxBottom = 0;
       }
       if (key === 0 || parent.type === BLOCK_TYPES.legate) {
         (deputyBottom > parentBlockParams.bottom.y)
-          ? newTopY = deputyBottom + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT
-          : newTopY = parentBlockParams.bottom.y + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+          ? newTopY = deputyBottom + verticalSpaceBetweenBlocks
+          : newTopY = parentBlockParams.bottom.y + verticalSpaceBetweenBlocks;
 
         if (takeVerticalShift) {
-          newTopY = previousDeepestVerticalShift + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+          newTopY = previousDeepestVerticalShift + verticalSpaceBetweenBlocks;
         }
         childBlock.style.top = `${newTopY}px`;
       } else {
-        newTopY = previousBottom + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+        if (previousBottom >= deepestVerticalShift - 45) {
+          newTopY = previousBottom + verticalSpaceBetweenBlocks;
+        } else {
+          newTopY = deepestVerticalShift + verticalSpaceBetweenBlocks;
+        }
         childBlock.style.top = `${newTopY}px`;
       }
 
       const newChildBlockParams = getBlockParams(childBlock, child, parentBlockParams.top.y);
+      previousMaxBottom = Math.max(previousMaxBottom, newChildBlockParams.bottom.y);
       previousBottom = newChildBlockParams.bottom.y;
       blockParamsMap.set(child.id, newChildBlockParams);
 
@@ -597,11 +627,12 @@ const shiftChildBlocksDown = (parent, parentBlockParams, blocksMap, blockParamsM
       shiftChildBlocksDown(child, newChildBlockParams, blocksMap, blockParamsMap, deepDeputyBottom, childInlineCount);
 
       const childrenVerticalShift = getVerticalShiftFromChildren(child.children, blockParamsMap);
-      if (deepestVerticalShift < childrenVerticalShift) {
-        deepestVerticalShift = childrenVerticalShift;
-      }
+      deepestVerticalShift = Math.max(deepestVerticalShift, childrenVerticalShift);
+      // if (deepestVerticalShift < childrenVerticalShift) {
+      //   deepestVerticalShift = childrenVerticalShift;
+      // }
       if (deepestVerticalShift === 0) {
-        deepestVerticalShift = previousBottom + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
+        deepestVerticalShift = previousBottom + verticalSpaceBetweenBlocks;
       }
       childKey += 1;
   });
@@ -699,6 +730,27 @@ const drawAreaSeparator = (areaMap, fullWidth) => {
 
 const saveBlockParamsMapToDOM = () => {
 
+};
+
+/**
+ *
+ * @param submitFunction
+ */
+const createSubmitToImageButton = (submitFunction) => {
+  const submitToImageButton = document.createElement(`button`);
+  submitToImageButton.setAttribute(`class`, `submit_to_image_button`);
+  submitToImageButton.onclick = submitFunction;
+  submitToImageButton.title = `Выгрузить изображение`;
+
+  const span = document.createElement(`span`);
+  const submit_to_image_button_img = document.createElement(`img`);
+  submit_to_image_button_img.setAttribute(`src`, `../public/download.svg`);
+  submit_to_image_button_img.setAttribute(`class`, `submit_to_image_button_img`);
+  span.appendChild(submit_to_image_button_img);
+
+  submitToImageButton.appendChild(span);
+
+  document.body.appendChild(submitToImageButton);
 };
 
 drawScheme();

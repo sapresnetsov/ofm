@@ -6,7 +6,7 @@ import {
   H_BLOCK_PADDING,
   IND_HEIGHT,
   IND_WIDTH, LEFT,
-  MIN_BLOCK_HEIGHT, ORG_UNIT, POSITION, RIGHT, TOP, V_SPACE_BETWEEN_BLOCKS,
+  MIN_BLOCK_HEIGHT, POSITION, RIGHT, TOP, V_SPACE_BETWEEN_BLOCKS,
 } from './constants';
 
 /**
@@ -88,7 +88,7 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
       indicator.style.borderWidth = `${indBorderWidth}px`;
       indicator.style.backgroundColor = 'lightyellow';
       indicator.style.color = 'blue';
-      indicator.style.fontSize = '6pt';
+      indicator.style.fontSize = '8px';
       indicator.innerHTML = `<p style="margin: 0">${ind.key} ${ind.value}</p>`;
       if (i !== 0) {
         indicator.style.borderRight = `0`;
@@ -228,7 +228,6 @@ export const appendBlock = (left, top, width, height, child, blocksMap, blockPar
   // подбор высоты
   const childHeight = childBlock.children[0].clientHeight;
   const indicatorBlockTop = childHeight + BORDER_WIDTH[blockLevel] * 2;
-  // childBlock.style.height = childHeight + 'px';
   childBlock.children[0].style.height = childHeight + 'px';
   childBlock.children[1].style.top = indicatorBlockTop + 'px';
   blocksMap.set(child.id, childBlock);
@@ -248,6 +247,7 @@ export const appendBlock = (left, top, width, height, child, blocksMap, blockPar
  *  toImage: boolean,
  *  toPdf: boolean,
  *  deleteTechBlock: boolean,
+ *  submitToImage: boolean
  *  }}
  */
 export const getDataFromDOM = () => {
@@ -260,8 +260,9 @@ export const getDataFromDOM = () => {
   const toImage = getDomValue('toImage') === 'true';
   const toPdf = getDomValue('toPdf') === 'true';
   const deleteTechBlock = getDomValue('deleteTechBlock') === 'true';
+  const submitToImage = getDomValue('submitToImage') === 'true';
 
-  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock};
+  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock, submitToImage};
 };
 
 /**
@@ -384,7 +385,6 @@ export const createUpsideDownConnector = ( root,
     }
     // точки соединения смещены относительно друг-друга
     if (!orgUnitArea) {
-      let partsCount = 3;
       if (curationLine) {
         if (fromPoint.x > toPoint.x) {
           fromPoint.x -= 5;
@@ -620,7 +620,7 @@ export const getFullHeight = (areaMap) => {
 
 export const getFullWidthHeight = (parent, blockParamsMap, structuralUnitsAreaMap, assignedStaffAreaMap, orgUnitsAreaMap) => {
   let fullWidth = 0;
-  let fullHeight = 0;
+  let fullHeight;
   let parentBlockParams = blockParamsMap.get(parent.id);
   if (!parent.children.length) {
     fullHeight = parentBlockParams.bottom + IND_HEIGHT;
@@ -675,20 +675,20 @@ export const getHorizontalShiftFromChildren = (children, blockParamsMap) => {
 
     if (!!childBlockParams) {
       const childrenHorizontalShift = getHorizontalShiftFromChildren(child.children, blockParamsMap);
-
-      if (maxChildrenHorizontalShift < childrenHorizontalShift) {
-        maxChildrenHorizontalShift = childrenHorizontalShift;
-      }
-
-      if (currentHorizontalShift < childBlockParams.right.x) {
-        currentHorizontalShift = childBlockParams.right.x;
-      }
+      maxChildrenHorizontalShift = Math.max(maxChildrenHorizontalShift, childrenHorizontalShift);
+      // if (maxChildrenHorizontalShift < childrenHorizontalShift) {
+      //   maxChildrenHorizontalShift = childrenHorizontalShift;
+      // }
+      currentHorizontalShift = Math.max(currentHorizontalShift, childBlockParams.right.x);
+      // if (currentHorizontalShift < childBlockParams.right.x) {
+      //   currentHorizontalShift = childBlockParams.right.x;
+      // }
     }
   });
-
-  if (maxChildrenHorizontalShift > currentHorizontalShift) {
-    currentHorizontalShift = maxChildrenHorizontalShift;
-  }
+  currentHorizontalShift = Math.max(currentHorizontalShift, maxChildrenHorizontalShift);
+  // if (maxChildrenHorizontalShift > currentHorizontalShift) {
+  //   currentHorizontalShift = maxChildrenHorizontalShift;
+  // }
 
   return currentHorizontalShift;
 };
@@ -712,20 +712,20 @@ export const getVerticalShiftFromChildren = (children, blockParamsMap) => {
 
     if (!!childBlockParams) {
       const childrenVerticalShift = getVerticalShiftFromChildren(child.children, blockParamsMap);
-
-      if (maxChildrenVerticalShift < childrenVerticalShift) {
-        maxChildrenVerticalShift = childrenVerticalShift;
-      }
-
-      if (currentVerticalShift < childBlockParams.bottom.y) {
-        currentVerticalShift = childBlockParams.bottom.y;
-      }
+      maxChildrenVerticalShift = Math.max(maxChildrenVerticalShift, childrenVerticalShift);
+      // if (maxChildrenVerticalShift < childrenVerticalShift) {
+      //   maxChildrenVerticalShift = childrenVerticalShift;
+      // }
+      currentVerticalShift = Math.max(currentVerticalShift, childBlockParams.bottom.y);
+      // if (currentVerticalShift < childBlockParams.bottom.y) {
+      //   currentVerticalShift = childBlockParams.bottom.y;
+      // }
     }
   });
-
-  if (maxChildrenVerticalShift > currentVerticalShift) {
-    currentVerticalShift = maxChildrenVerticalShift;
-  }
+  maxChildrenVerticalShift = Math.max(maxChildrenVerticalShift, currentVerticalShift);
+  // if (maxChildrenVerticalShift > currentVerticalShift) {
+  //   currentVerticalShift = maxChildrenVerticalShift;
+  // }
 
   return currentVerticalShift;
 };
@@ -742,27 +742,28 @@ export const getLowestLeftFromChildren = (children, blockParamsMap) => {
   }
 
   let currentLeft = 100000;
-  let lowestChildrenVerticalShift = 1000000;
+  let lowestChildrenLeft = 1000000;
 
   children.forEach((child) => {
     const childBlockParams = blockParamsMap.get(child.id);
 
     if (!!childBlockParams) {
       const childrenLeft = getLowestLeftFromChildren(child.children, blockParamsMap);
+      lowestChildrenLeft = Math.min(lowestChildrenLeft, childrenLeft);
+      // if (lowestChildrenVerticalShift > childrenLeft) {
+      //   lowestChildrenVerticalShift = childrenLeft;
+      // }
 
-      if (lowestChildrenVerticalShift > childrenLeft) {
-        lowestChildrenVerticalShift = childrenLeft;
-      }
-
-      if (currentLeft > childBlockParams.left.x) {
-        currentLeft = childBlockParams.left.x;
-      }
+      currentLeft = Math.min(currentLeft, childBlockParams.left.x);
+      // if (currentLeft > childBlockParams.left.x) {
+      //   currentLeft = childBlockParams.left.x;
+      // }
     }
   });
-
-  if (lowestChildrenVerticalShift < currentLeft) {
-    currentLeft = lowestChildrenVerticalShift;
-  }
+  currentLeft = Math.min(currentLeft, lowestChildrenLeft);
+  // if (lowestChildrenLeft < currentLeft) {
+  //   currentLeft = lowestChildrenLeft;
+  // }
 
   return currentLeft;
 };

@@ -1,4 +1,4 @@
-import { BORDER_WIDTH, IND_HEIGHT } from "../constants";
+import { BORDER_WIDTH } from "../constants";
 
 /**
  * Перевод HTML на канву
@@ -105,7 +105,8 @@ const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPadding
     const textX = x + innerPaddingLeft + borderWidth;
     let textY = y + borderWidth + title.paddingTop;
     const textWidth = width - innerPaddingLeft - innerPaddingRight;
-    const titleTextObject = {...title, height: !functions.length ? height - IND_HEIGHT - title.height: title.height }
+    // const titleTextObject = {...title, height: !functions.length ? height - IND_HEIGHT - title.height: title.height }
+    const titleTextObject = {...title }
     textY = rectDrawText( ctx,
         textX,
         textY,
