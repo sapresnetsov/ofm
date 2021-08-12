@@ -18,7 +18,7 @@ import {
   ADDITIONAL_INFO,
 } from './model/constants';
 import {
-  appendBlock,
+  appendBlock, createCurationConnector,
   createLine,
   createUpsideDownConnector,
   getBlockParams,
@@ -83,7 +83,7 @@ export const drawScheme = () => {
   let parentBlockParams = blockParamsMap.get(parent.id);
 
   // отрисовка блоков прямого подчинения
-  drawChildBlocks(blocksMap, blockParamsMap, parent, parentBlockParams);
+  drawGovernanceBlocks(blocksMap, blockParamsMap, parent, parentBlockParams);
 
   // зоны отрисованных блоков прямого подчинения
   const childrenBlocksAreas = getChildrenBlocksAreas(parent, blockParamsMap);
@@ -160,9 +160,13 @@ export const drawScheme = () => {
  * @param {BlockParams} parentBlockParams
  * @return Object
  */
-const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) => {
+const drawGovernanceBlocks = ( blocksMap,
+                               blockParamsMap,
+                               parent,
+                               parentBlockParams) => {
 
-  const children = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo !== OTYPES.STRUCTURAL_UNIT && child.additionalInfo !== ADDITIONAL_INFO.ASSIGNED_STAFF);
+  const children = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy
+                                                              && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE);
 
   const childrenCount = children.length;
   if (childrenCount === 0 && !parent.children.filter((child) => child.type === BLOCK_TYPES.deputy)) {
@@ -189,7 +193,7 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
 
     // Отрисовка заместителей без потомков
     const deputyVerticalShift = drawDeputy(blocksMap, blockParamsMap, parent, parentBlockParams);
-    if (childrenCount > 1) {
+    if (childrenCount > 1 || parent.type ===BLOCK_TYPES.leadership && childrenCount > 0) {
       y += deputyVerticalShift;
     }
   }
@@ -200,7 +204,7 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
     const childHeight = childBlock.children[0].clientHeight;
 
     // отрисовка потомков
-    const shift = drawChildBlocks(blocksMap, blockParamsMap, child, childBlockParams);
+    const shift = drawGovernanceBlocks(blocksMap, blockParamsMap, child, childBlockParams);
 
     // определение максимальной высоты для выравнивания линии
     if (childHeight > maxHeight) {
@@ -248,7 +252,7 @@ const drawChildBlocks = (blocksMap, blockParamsMap, parent, parentBlockParams) =
   // если дочерние блоки необходимо вывести в одну строку, то необходимо сместить родительский блок
   // и все следующие
   let retHorizontalShift = 0;
-  if (childrenDrawnInline && childrenCount > 1) {
+  if (childrenDrawnInline && childrenCount > 1 || parent.type ===BLOCK_TYPES.leadership && childrenCount > 0) {
     if (childrenCount < inlineMaxCount) {
       childrenInlineCount = childrenCount;
     } else {
@@ -360,6 +364,78 @@ const drawAssignedStaffBlocks = ( blocksMap,
                                   governanceBlocksArea,
                                   initialVerticalShift ) => {
 
+  const children = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy
+                                                     && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE);
+
+  const childrenCount = children.length;
+  if (childrenCount === 0) {
+    return 0;
+  }
+
+  let childrenDrawnInline = false;
+  let childrenInlineCount = 0;
+  let inlineMaxVerticalShift = 0;
+
+  const width = parentBlockParams.width - LEVEL_WIDTH_STEP;
+  const height = MIN_BLOCK_HEIGHT;
+
+  let verticalShiftFromChildren = 0;
+  children.forEach((child) => {
+    const childBlockParams = blockParamsMap.get(child.id);
+    //  получение максимального вертикального сдвига
+    const deepestVerticalShift = drawAssignedStaffBlocks( blocksMap,
+                                                          blockParamsMap,
+                                                          child,
+                                                          childBlockParams,
+                                                          governanceBlocksArea,
+                                                          initialVerticalShift );
+    // определение максимальной высоты сдвига
+    verticalShiftFromChildren = Math.max(verticalShiftFromChildren, deepestVerticalShift);
+  });
+
+  const parentBlockArea = governanceBlocksArea.get(parent.id);
+  const initX = parentBlockArea.x;
+  const initY = initialVerticalShift;
+  let x = initX;
+  let y = verticalShiftFromChildren || initY;
+  y = Math.max(y, parentBlockArea.y + parentBlockArea.height);
+
+  const structuralUnits = parent.children.filter((child) => child.additionalInfo === ADDITIONAL_INFO.ASSIGNED_STAFF);
+  let structuralUnitsVerticalShift = 0;
+
+  const inlineMaxCount = Math.floor(parentBlockArea.width / width);
+  if (inlineMaxCount > 1 && structuralUnits.length > 1) {
+    childrenDrawnInline = true;
+  }
+
+  structuralUnits.forEach((structuralUnit) => {
+    const structuralUnitBlock = appendBlock(x, y, width, height, structuralUnit, blocksMap, blockParamsMap, parentBlockParams);
+    const structuralUnitBlockParams = blockParamsMap.get(structuralUnit.id);
+    const childHeight = structuralUnitBlock.children[0].clientHeight;
+
+    if (!childrenDrawnInline) {
+      y = structuralUnitBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+    } else {
+      if (childHeight > structuralUnitsVerticalShift) {
+        structuralUnitsVerticalShift = childHeight;
+      }
+      childrenInlineCount++;
+
+      const horizontalShift = structuralUnitBlockParams.right.x;
+
+      // в один ряд выводится не больше n блоков
+      if (childrenInlineCount < inlineMaxCount) {
+        x = horizontalShift + H_SPACE_BETWEEN_BLOCKS;
+      } else {
+        x = initX;
+        y += structuralUnitsVerticalShift + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+        childrenInlineCount = 0;
+        inlineMaxVerticalShift = 0;
+      }
+    }
+  });
+
+  return y;
 
 }
 
@@ -398,7 +474,7 @@ const drawStructuralUnitBlocks = ( blocksMap,
   let verticalShiftFromChildren = 0;
   children.forEach((child) => {
     const childBlockParams = blockParamsMap.get(child.id);
-  //   отрисовка потомков
+    //  получение максимального вертикального сдвига
     const deepestVerticalShift = drawStructuralUnitBlocks( blocksMap,
                                                            blockParamsMap,
                                                            child,
@@ -406,9 +482,7 @@ const drawStructuralUnitBlocks = ( blocksMap,
                                                            governanceBlocksArea,
                                                            initialVerticalShift );
     // определение максимальной высоты сдвига
-    if (deepestVerticalShift > verticalShiftFromChildren) {
-      verticalShiftFromChildren = deepestVerticalShift;
-    }
+    verticalShiftFromChildren = Math.max(verticalShiftFromChildren, deepestVerticalShift);
   });
 
   const parentBlockArea = governanceBlocksArea.get(parent.id);
@@ -417,7 +491,7 @@ const drawStructuralUnitBlocks = ( blocksMap,
   let x = initX;
   let y = verticalShiftFromChildren || initY;
 
-  const structuralUnits = parent.children.filter((child) => child.additionalInfo === OTYPES.STRUCTURAL_UNIT);
+  const structuralUnits = parent.children.filter((child) => child.additionalInfo === ADDITIONAL_INFO.STRUCTURAL_UNIT);
   let structuralUnitsVerticalShift = 0;
 
   const inlineMaxCount = Math.floor(parentBlockArea.width / width);
@@ -428,7 +502,7 @@ const drawStructuralUnitBlocks = ( blocksMap,
   structuralUnits.forEach((structuralUnit) => {
     const structuralUnitBlock = appendBlock(x, y, width, height, structuralUnit, blocksMap, blockParamsMap, parentBlockParams);
     const structuralUnitBlockParams = blockParamsMap.get(structuralUnit.id);
-    const childHeight = parseInt(structuralUnitBlock.children[0].clientHeight);
+    const childHeight = structuralUnitBlock.children[0].clientHeight;
 
     if (!childrenDrawnInline) {
       y = structuralUnitBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
@@ -490,7 +564,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
     if (parent.otype === OTYPES.POSITION && orgUnitBlockParams.y !== orgUnitArea.y) {
       tempOrgUnit = {...orgUnitArea};
     }
-    createUpsideDownConnector(root, linesMap, tempOrgUnit, parentBlockParams, orgUnitBlockParams, fromSide, toSide);
+    createUpsideDownConnector(root, blockParamsMap, linesMap, tempOrgUnit, parentBlockParams, orgUnitBlockParams, fromSide, toSide);
     drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, orgUnit);
   });
 
@@ -499,15 +573,15 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   positions.forEach((child) => {
     const childBlockParams = blockParamsMap.get(child.id);
 
-    let fromSize;
-    let toSize;
+    let fromSide;
+    let toSide;
 
     if (child.type === BLOCK_TYPES.legate) {
-      fromSize = BOTTOM;
-      toSize = TOP;
+      fromSide = BOTTOM;
+      toSide = TOP;
     } else {
-      fromSize = RIGHT;
-      toSize = LEFT;
+      fromSide = RIGHT;
+      toSide = LEFT;
     }
 
     let parentArea;
@@ -515,7 +589,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
       parentArea = {...orgUnitArea};
     }
 
-    createUpsideDownConnector(root, linesMap, parentArea, parentBlockParams, childBlockParams, fromSize, toSize);
+    createUpsideDownConnector(root, blockParamsMap, linesMap, parentArea, parentBlockParams, childBlockParams, fromSide, toSide);
     drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, child);
   });
 
@@ -527,7 +601,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   }
   assignedStaff.forEach((assignedStaff) => {
     const assignedStaffBlockParams = blockParamsMap.get(assignedStaff.id);
-    createUpsideDownConnector(root, linesMap, tempOrgUnit, parentBlockParams, assignedStaffBlockParams, fromSide, toSide);
+    createUpsideDownConnector(root, blockParamsMap, linesMap, tempOrgUnit, parentBlockParams, assignedStaffBlockParams, fromSide, toSide);
     drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, assignedStaff);
   });
 
@@ -542,7 +616,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   }
   structuralUnits.forEach((structuralUnit) => {
     const structuralUnitParams = blockParamsMap.get(structuralUnit.id);
-    createUpsideDownConnector(root, linesMap, tempOrgUnit, parentBlockParams, structuralUnitParams, fromSide, toSide);
+    createUpsideDownConnector(root, blockParamsMap, linesMap, tempOrgUnit, parentBlockParams, structuralUnitParams, fromSide, toSide);
     drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, structuralUnits);
   });
 
@@ -552,10 +626,10 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
       const curatedBlockParams = blockParamsMap.get(curatedId);
       if (curatedBlockParams) {
         let curatedUnitArea;
-        if (curatedBlockParams.y !== orgUnitArea.y) {
+        if (orgUnitArea && curatedBlockParams.y !== orgUnitArea.y) {
           curatedUnitArea= {...orgUnitArea};
         }
-        createUpsideDownConnector(root, linesMap, curatedUnitArea, parentBlockParams, curatedBlockParams, BOTTOM, TOP, true);
+        // createCurationConnector(root, blockParamsMap, linesMap, curatedUnitArea, parentBlockParams, curatedBlockParams, BOTTOM, TOP, true);
       }
     });
   }
@@ -631,9 +705,6 @@ const shiftChildBlocksDown = ( parent,
 
       const childrenVerticalShift = getVerticalShiftFromChildren(child.children, blockParamsMap);
       deepestVerticalShift = Math.max(deepestVerticalShift, childrenVerticalShift);
-      // if (deepestVerticalShift < childrenVerticalShift) {
-      //   deepestVerticalShift = childrenVerticalShift;
-      // }
       if (deepestVerticalShift === 0) {
         deepestVerticalShift = previousBottom + verticalSpaceBetweenBlocks;
       }
@@ -699,7 +770,7 @@ const shiftOrgUnitsDown = ( parent,
  *
  * @param {Map} blocksMap
  * @param {Map} blockParamsMap
- * @param {ADDITIONAL_INFO} additionalInfo
+ * @param {string} additionalInfo
  * @param {number} verticalShift
  */
 const shiftOtherUnitsDown = ( blocksMap,

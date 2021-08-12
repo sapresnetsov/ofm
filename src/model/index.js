@@ -57,6 +57,7 @@
  * @property {OFMData.id} id
  * @property {OFMData.title} title
  * @property {OFMData.functions} functions
+ * @property {OFMData.type} type
  * @property {OFMData.additionalInfo} additionalInfo
  * @property {OFMData.indicators} indicators
  */

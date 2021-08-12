@@ -135,7 +135,7 @@ export const getPoint = (pX, pY) => {
 /**
  * Получение параметров HTML-блока и параметров отображения по смыслу в ОФМ
  * @param {Object} block
- * @param {Object} ofmValue
+ * @param {OFMData} ofmValue
  * @param {number} nearParentTop
  * @param {Boolean} [isRootChild]
  * @return {BlockParams}
@@ -220,6 +220,7 @@ export const getBlockParams = ( block,
     id: ofmValue.id,
     title: title,
     functions: functions,
+    type: ofmValue.type,
     additionalInfo: ofmValue.additionalInfo,
     indicators: indicators,
   };
@@ -238,7 +239,15 @@ export const getBlockParams = ( block,
  * @param {Boolean} [isRootChild]
  * @return {HTMLElement}
  */
-export const appendBlock = (left, top, width, height, child, blocksMap, blockParamsMap, parentParams, isRootChild) => {
+export const appendBlock = ( left,
+                             top,
+                             width,
+                             height,
+                             child,
+                             blocksMap,
+                             blockParamsMap,
+                             parentParams,
+                             isRootChild) => {
   const blockType = child.type || 'default';
   const blockLevel = child.level || 'default';
   const initialBlockParams = [left, top, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
@@ -350,28 +359,28 @@ export const createLine = (root, startPoint, endPoint, lineType, lineStyle='soli
 /**
  * пока реализация предполагает только соединение низа и верха, либо бока и бока
  * @param {HTMLElement} root
+ * @param {Map} blockParamsMap
  * @param {Map} linesMap
  * @param {Object | undefined} orgUnitArea
- * @param {Object} blockFrom
- * @param {Object} blockTo
+ * @param {BlockParams} blockFrom
+ * @param {BlockParams} blockTo
  * @param {string} fromSide
  * @param {string} toSide
- * @param {Boolean} [curationLine]
  */
 export const createUpsideDownConnector = ( root,
+                                           blockParamsMap,
                                            linesMap,
                                            orgUnitArea,
                                            blockFrom,
                                            blockTo,
                                            fromSide,
-                                           toSide,
-                                           curationLine) => {
-  const fromPoint = getPointOfSide(blockFrom, fromSide);
+                                           toSide) => {
 
-  if (!blockTo) {
+  if (!blockFrom || !blockTo) {
     return;
   }
 
+  const fromPoint = getPointOfSide(blockFrom, fromSide);
   const toPoint = getPointOfSide(blockTo, toSide);
   const key = blockFrom.id + '/' + blockTo.id;
 
@@ -380,12 +389,7 @@ export const createUpsideDownConnector = ( root,
 
   let stdNodeShift = 20;
   let curationShift = 0;
-  if (curationLine) {
-    curationShift = 10;
-    stdNodeShift = 15;
-    lineStyle = 'dashed';
-    lineColor = 'blue';
-  }
+
   if (fromSide === BOTTOM && toSide === TOP) {
     // точки соединения находятся на одной вертикали
     if (Math.abs(fromPoint.x - toPoint.x) < 5 && (!orgUnitArea || orgUnitArea.width === 0)) {
@@ -404,6 +408,194 @@ export const createUpsideDownConnector = ( root,
     }
     // точки соединения смещены относительно друг-друга
     if (!orgUnitArea) {
+      const yMiddle = toPoint.y - stdNodeShift;
+      let parMidPoint = getPoint(fromPoint.x, yMiddle);
+      const childMidPoint = getPoint(toPoint.x + curationShift, yMiddle);
+      const endPoint = getPoint(toPoint.x + curationShift, toPoint.y);
+      // если линия проходит через блок, то нужно его обойти
+      if (parMidPoint.y >= fromPoint.y) {
+        createLine(root, fromPoint, parMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parMidPoint, childMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, childMidPoint, endPoint, 'v', lineStyle, lineColor);
+        linesMap.set(key, {
+          parts:
+              [
+                {...fromPoint},
+                {...parMidPoint},
+                {...childMidPoint},
+                {...endPoint},
+              ],
+          lineStyle: lineStyle,
+          lineColor: lineColor
+        });
+      } else {
+        const parVertMidPoint = getPoint(fromPoint.x, fromPoint.y + IND_HEIGHT + 5);
+        const parHorMidPoint = getPoint(blockFrom.right.x + curationShift, parVertMidPoint.y);
+        let parMidPoint = getPoint(parHorMidPoint.x, yMiddle);
+        createLine(root, fromPoint, parVertMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parVertMidPoint, parHorMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, parHorMidPoint, parMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parMidPoint, childMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, childMidPoint, endPoint, 'v', lineStyle, lineColor);
+        linesMap.set(key, {
+          parts:
+              [
+                {...fromPoint},
+                {...parVertMidPoint},
+                {...parHorMidPoint},
+                {...parMidPoint},
+                {...childMidPoint},
+                {...endPoint},
+              ],
+          lineStyle: lineStyle,
+          lineColor: lineColor
+        });
+      }
+
+    } else {
+      const topAreaPoint = getPoint(fromPoint.x, orgUnitArea.y - stdNodeShift);
+      const topLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, orgUnitArea.y - stdNodeShift);
+      const bottomLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, toPoint.y - stdNodeShift);
+      const bottomAreaPoint = getPoint(toPoint.x, toPoint.y - stdNodeShift);
+      createLine(root, fromPoint, topAreaPoint, 'v', lineStyle, lineColor);
+      createLine(root, topAreaPoint, topLeftAreaPoint, 'h', lineStyle, lineColor);
+      createLine(root, topLeftAreaPoint, bottomLeftAreaPoint, 'v', lineStyle, lineColor);
+      createLine(root, bottomLeftAreaPoint, bottomAreaPoint, 'h', lineStyle, lineColor);
+      createLine(root, bottomAreaPoint, toPoint, 'v', lineStyle, lineColor);
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...topAreaPoint},
+              {...topLeftAreaPoint},
+              {...bottomLeftAreaPoint},
+              {...bottomAreaPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+    }
+  }
+
+  // TODO временное решение
+  if (fromSide === BOTTOM && toSide === LEFT) {
+    // // блок снизу
+    // const fromPointX = fromPoint.x + 10;
+    // if (fromPoint.y > toPoint.y) {
+    //   if (!orgUnitArea) {
+    //
+    //   } else {
+    //     const topAreaPoint = getPoint(fromPointX, orgUnitArea.y - curationNodeShift);
+    //     if ()
+    //   }
+    //   // правее
+    //
+    //   // левее
+    // }
+    // //
+  }
+
+  if (fromSide === LEFT && toSide === LEFT) {
+    // блок снизу и правее
+    if (toPoint.x >= fromPoint.x ) {
+      const parMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y);
+      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, toPoint.y);
+      createLine(root, fromPoint, parMidPoint, 'h');
+      createLine(root, parMidPoint, childMidPoint, 'v');
+      createLine(root, childMidPoint, toPoint, 'h');
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...parMidPoint},
+              {...childMidPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+    }
+  }
+
+  if (fromSide === RIGHT && toSide === LEFT) {
+    if (Math.abs(fromPoint.y - toPoint.y) < 15) {
+      toPoint.y += (fromPoint.y - toPoint.y);
+      createLine(root, fromPoint, toPoint, 'h');
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+      return;
+    }
+    // блок снизу и правее
+    if (toPoint.x >= fromPoint.x ) {
+      const parMidPoint = getPoint(toPoint.x - stdNodeShift, fromPoint.y);
+      const childMidPoint = getPoint(toPoint.x - stdNodeShift, toPoint.y);
+      createLine(root, fromPoint, parMidPoint, 'h');
+      createLine(root, parMidPoint, childMidPoint, 'v');
+      createLine(root, childMidPoint, toPoint, 'h');
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...parMidPoint},
+              {...childMidPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+    }
+  }
+};
+
+export const createCurationConnector = ( root,
+                                         blockParamsMap,
+                                         linesMap,
+                                         orgUnitArea,
+                                         blockFrom,
+                                         blockTo,
+                                         fromSide,
+                                         toSide ) => {
+
+  const fromPoint = getPointOfSide(blockFrom, fromSide);
+  const toPoint = getPointOfSide(blockTo, toSide);
+  const key = blockFrom.id + '/' + blockTo.id;
+
+  let lineStyle = 'dashed';
+  let lineColor = 'blue';
+
+  let stdNodeShift = 15;
+
+
+  const siblingBlockParams = [];
+  // для блоков заместителей без потомков нужно проверить,
+  // что выходящая линия не пересекает других таких заместителей
+  if (blockFrom.type === BLOCK_TYPES.deputy) {
+    const blockFromParentId = blockFrom.id.split('/')[0];
+
+    blockParamsMap.forEach((value, key) => {
+      if (key.split('/')[0] === blockFromParentId) {
+        siblingBlockParams.push(value);
+      }
+    })
+
+    if (siblingBlockParams.length && siblingBlockParams.filter(block => block.y > fromPoint.y)) {
+
+    }
+  }
+
+  if (fromSide === BOTTOM && toSide === TOP) {
+
+    // точки соединения смещены относительно друг-друга
+    if (!orgUnitArea) {
+
       if (curationLine) {
         if (fromPoint.x > toPoint.x) {
           fromPoint.x -= 5;
@@ -520,81 +712,6 @@ export const createUpsideDownConnector = ( root,
     }
   }
 
-  // TODO временное решение
-  if (fromSide === BOTTOM && toSide === LEFT) {
-    // // блок снизу
-    // const fromPointX = fromPoint.x + 10;
-    // if (fromPoint.y > toPoint.y) {
-    //   if (!orgUnitArea) {
-    //
-    //   } else {
-    //     const topAreaPoint = getPoint(fromPointX, orgUnitArea.y - curationNodeShift);
-    //     if ()
-    //   }
-    //   // правее
-    //
-    //   // левее
-    // }
-    // //
-  }
-
-  if (fromSide === LEFT && toSide === LEFT) {
-    // блок снизу и правее
-    if (toPoint.x >= fromPoint.x ) {
-      const parMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y);
-      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, toPoint.y);
-      createLine(root, fromPoint, parMidPoint, 'h');
-      createLine(root, parMidPoint, childMidPoint, 'v');
-      createLine(root, childMidPoint, toPoint, 'h');
-      linesMap.set(key, {
-        parts:
-            [
-              {...fromPoint},
-              {...parMidPoint},
-              {...childMidPoint},
-              {...toPoint},
-            ],
-        lineStyle: lineStyle,
-        lineColor: lineColor
-      });
-    }
-  }
-
-  if (fromSide === RIGHT && toSide === LEFT) {
-    if (Math.abs(fromPoint.y - toPoint.y) < 15) {
-      toPoint.y += (fromPoint.y - toPoint.y);
-      createLine(root, fromPoint, toPoint, 'h');
-      linesMap.set(key, {
-        parts:
-            [
-              {...fromPoint},
-              {...toPoint},
-            ],
-        lineStyle: lineStyle,
-        lineColor: lineColor
-      });
-      return;
-    }
-    // блок снизу и правее
-    if (toPoint.x >= fromPoint.x ) {
-      const parMidPoint = getPoint(toPoint.x - stdNodeShift, fromPoint.y);
-      const childMidPoint = getPoint(toPoint.x - stdNodeShift, toPoint.y);
-      createLine(root, fromPoint, parMidPoint, 'h');
-      createLine(root, parMidPoint, childMidPoint, 'v');
-      createLine(root, childMidPoint, toPoint, 'h');
-      linesMap.set(key, {
-        parts:
-            [
-              {...fromPoint},
-              {...parMidPoint},
-              {...childMidPoint},
-              {...toPoint},
-            ],
-        lineStyle: lineStyle,
-        lineColor: lineColor
-      });
-    }
-  }
 };
 
 /**
@@ -777,7 +894,7 @@ export const getLowestLeftFromChildren = (children, blockParamsMap) => {
  *
  * @param {OFMData} parent
  * @param {Map} blockParamsMap
- * @return {Map[]}
+ * @return {Object[]}
  */
 export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
 
