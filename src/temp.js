@@ -9,7 +9,7 @@ import {
   LEVEL_WIDTH_STEP,
   MIN_BLOCK_HEIGHT, ORG_UNIT, POSITION, STRUCTURAL_UNIT,
   V_SPACE_BETWEEN_BLOCKS
-} from "./constants";
+} from "./model/constants";
 import {appendBlock, getBlockParams} from "./utils";
 
 /**

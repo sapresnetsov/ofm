@@ -17,6 +17,10 @@ export const BLOCK_LEVELS = {
   dependent: 'dependent',
   default: 'default',
 };
+export const OTYPES = {
+  POSITION: 'S',
+  ORG_UNIT: 'O',
+};
 
 // pt -> px
 export const BORDER_WIDTH = {
@@ -40,12 +44,11 @@ export const BACKGROUND_COLOR = {
   ind: `#ffffca`,
 };
 
-export const POSITION = 'S';
-export const ORG_UNIT = 'O';
-
-export const GOVERNANCE = 'U';
-export const ASSIGNED_STAFF = 'X';
-export const STRUCTURAL_UNIT = 'S';
+export const ADDITIONAL_INFO = {
+  GOVERNANCE: 'U',
+  ASSIGNED_STAFF: 'X',
+  STRUCTURAL_UNIT: 'S',
+};
 
 export const TOP = `top`;
 export const BOTTOM = `bottom`;
@@ -55,7 +58,6 @@ export const RIGHT = `right`;
 export const MIN_BLOCK_WIDTH = 250;
 export const MAX_BLOCK_WIDTH = 300;
 export const MIN_BLOCK_HEIGHT = 100;
-export const MAX_BLOCK_HEIGHT = 100;
 export const IND_HEIGHT = 15;
 export const IND_WIDTH = 40;
 // при задании величины необходимо учитывать padding внутри блоков
@@ -64,4 +66,6 @@ export const H_SPACE_BETWEEN_BLOCKS = 25 + H_BLOCK_PADDING * 2;
 export const V_SPACE_BETWEEN_BLOCKS = 30;
 export const LEVEL_WIDTH_STEP = 15;
 export const AREA_SHIFT = 20;
+
+export const STAMP_WIDTH = 550;
 

@@ -1,13 +1,21 @@
 /* eslint-disable indent */
 // отрисовка орг. блока
 import {
-  BACKGROUND_COLOR, BLOCK_TYPES,
-  BORDER_WIDTH, BOTTOM, GOVERNANCE,
+  ADDITIONAL_INFO,
+  BACKGROUND_COLOR,
+  BLOCK_LEVELS,
+  BLOCK_TYPES,
+  BORDER_WIDTH,
+  BOTTOM,
   H_BLOCK_PADDING,
   IND_HEIGHT,
-  IND_WIDTH, LEFT,
-  MIN_BLOCK_HEIGHT, ORG_UNIT, POSITION, RIGHT, TOP, V_SPACE_BETWEEN_BLOCKS,
-} from './constants';
+  IND_WIDTH,
+  LEFT,
+  MIN_BLOCK_HEIGHT,
+  RIGHT,
+  TOP,
+  V_SPACE_BETWEEN_BLOCKS,
+} from './model/constants';
 
 /**
  * Создания блока
@@ -22,7 +30,15 @@ import {
  * @param {any[]} indicators
  * @return {HTMLElement}
  */
-export const createBlock = (x, y, width, height, blockType='default', blockLevel='default', title, functions, indicators) => {
+export const createBlock = ( x,
+                             y,
+                             width,
+                             height,
+                             blockType=BLOCK_TYPES.default,
+                             blockLevel=BLOCK_LEVELS.default,
+                             title,
+                             functions,
+                             indicators) => {
   const outerBlock = document.createElement(`div`);
   outerBlock.setAttribute(`class`, `outer_block`);
   outerBlock.style.left = `${x}px`;
@@ -88,7 +104,7 @@ export const createBlock = (x, y, width, height, blockType='default', blockLevel
       indicator.style.borderWidth = `${indBorderWidth}px`;
       indicator.style.backgroundColor = 'lightyellow';
       indicator.style.color = 'blue';
-      indicator.style.fontSize = '6pt';
+      indicator.style.fontSize = '8px';
       indicator.innerHTML = `<p style="margin: 0">${ind.key} ${ind.value}</p>`;
       if (i !== 0) {
         indicator.style.borderRight = `0`;
@@ -119,12 +135,15 @@ export const getPoint = (pX, pY) => {
 /**
  * Получение параметров HTML-блока и параметров отображения по смыслу в ОФМ
  * @param {Object} block
- * @param {Object} ofmValue
+ * @param {OFMData} ofmValue
  * @param {number} nearParentTop
  * @param {Boolean} [isRootChild]
  * @return {BlockParams}
  */
-export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false) => {
+export const getBlockParams = ( block,
+                                ofmValue,
+                                nearParentTop,
+                                isRootChild=false) => {
   const left = parseInt(block.style.left, 10);
   const top = parseInt(block.style.top, 10);
   const width = parseInt(block.style.width, 10);
@@ -196,20 +215,21 @@ export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false
     left: getPoint(left, top + height / 2),
     right: getPoint(left + width + borderWidth * 2 + innerPaddingLeft + innerPaddingRight, top + height / 2),
     nearParentTop: nearParentTop,
-    additionalInfo: ofmValue.additionalInfo,
-    isRootChild: isRootChild,
     backgroundColor: innerBlockStyle.backgroundColor,
+    isRootChild: isRootChild,
     id: ofmValue.id,
     title: title,
     functions: functions,
+    type: ofmValue.type,
+    additionalInfo: ofmValue.additionalInfo,
     indicators: indicators,
   };
 };
 
 /**
  * Добавление блока
- * @param {number} x
- * @param {number} y
+ * @param {number} left
+ * @param {number} top
  * @param {number} width
  * @param {number} height
  * @param {Object} child
@@ -219,16 +239,23 @@ export const getBlockParams = (block, ofmValue, nearParentTop, isRootChild=false
  * @param {Boolean} [isRootChild]
  * @return {HTMLElement}
  */
-export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMap, parentParams, isRootChild) => {
+export const appendBlock = ( left,
+                             top,
+                             width,
+                             height,
+                             child,
+                             blocksMap,
+                             blockParamsMap,
+                             parentParams,
+                             isRootChild) => {
   const blockType = child.type || 'default';
   const blockLevel = child.level || 'default';
-  const initialBlockParams = [x, y, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
+  const initialBlockParams = [left, top, width, height, blockType, blockLevel, child.title, child.functions, child.indicators];
   const childBlock = createBlock(...initialBlockParams);
   root.appendChild(childBlock);
   // подбор высоты
   const childHeight = childBlock.children[0].clientHeight;
   const indicatorBlockTop = childHeight + BORDER_WIDTH[blockLevel] * 2;
-  // childBlock.style.height = childHeight + 'px';
   childBlock.children[0].style.height = childHeight + 'px';
   childBlock.children[1].style.top = indicatorBlockTop + 'px';
   blocksMap.set(child.id, childBlock);
@@ -242,26 +269,32 @@ export const appendBlock = (x, y, width, height, child, blocksMap, blockParamsMa
  *  ofmDataStr: string,
  *  ofmTitle: string,
  *  ofmStampStr: string,
- *  maxDepth: string,
+ *  maxDepth: number,
  *  drawSeparators: boolean,
  *  saveToDom: boolean,
  *  toImage: boolean,
  *  toPdf: boolean,
  *  deleteTechBlock: boolean,
+ *  submitToImage: boolean
+ *  assignedStaffLabel: string,
+ *  structuralUnitsLabel: string,
  *  }}
  */
 export const getDataFromDOM = () => {
   const ofmDataStr = getDomValue('ofmData');
   const ofmTitle = getDomValue('ofmTitle');
   const ofmStampStr = getDomValue('ofmStamp');
-  const maxDepth = getDomValue('maxDepth');
+  const maxDepth = parseInt(getDomValue('maxDepth'), 10) | 1;
   const drawSeparators = getDomValue('drawSeparators') === 'true';
   const saveToDom = getDomValue('saveToDom') === 'true';
   const toImage = getDomValue('toImage') === 'true';
   const toPdf = getDomValue('toPdf') === 'true';
   const deleteTechBlock = getDomValue('deleteTechBlock') === 'true';
+  const submitToImage = getDomValue('submitToImage') === 'true';
+  const assignedStaffLabel = getDomValue('assignedStaffLabel');
+  const structuralUnitsLabel = getDomValue('structuralUnitsLabel');
 
-  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock};
+  return { ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock, submitToImage, assignedStaffLabel, structuralUnitsLabel};
 };
 
 /**
@@ -330,28 +363,28 @@ export const createLine = (root, startPoint, endPoint, lineType, lineStyle='soli
 /**
  * пока реализация предполагает только соединение низа и верха, либо бока и бока
  * @param {HTMLElement} root
+ * @param {Map} blockParamsMap
  * @param {Map} linesMap
  * @param {Object | undefined} orgUnitArea
- * @param {Object} blockFrom
- * @param {Object} blockTo
+ * @param {BlockParams} blockFrom
+ * @param {BlockParams} blockTo
  * @param {string} fromSide
  * @param {string} toSide
- * @param {Boolean} [curationLine]
  */
 export const createUpsideDownConnector = ( root,
+                                           blockParamsMap,
                                            linesMap,
                                            orgUnitArea,
                                            blockFrom,
                                            blockTo,
                                            fromSide,
-                                           toSide,
-                                           curationLine) => {
-  const fromPoint = getPointOfSide(blockFrom, fromSide);
+                                           toSide) => {
 
-  if (!blockTo) {
+  if (!blockFrom || !blockTo) {
     return;
   }
 
+  const fromPoint = getPointOfSide(blockFrom, fromSide);
   const toPoint = getPointOfSide(blockTo, toSide);
   const key = blockFrom.id + '/' + blockTo.id;
 
@@ -360,12 +393,7 @@ export const createUpsideDownConnector = ( root,
 
   let stdNodeShift = 20;
   let curationShift = 0;
-  if (curationLine) {
-    curationShift = 10;
-    stdNodeShift = 15;
-    lineStyle = 'dashed';
-    lineColor = 'blue';
-  }
+
   if (fromSide === BOTTOM && toSide === TOP) {
     // точки соединения находятся на одной вертикали
     if (Math.abs(fromPoint.x - toPoint.x) < 5 && (!orgUnitArea || orgUnitArea.width === 0)) {
@@ -384,7 +412,194 @@ export const createUpsideDownConnector = ( root,
     }
     // точки соединения смещены относительно друг-друга
     if (!orgUnitArea) {
-      let partsCount = 3;
+      const yMiddle = toPoint.y - stdNodeShift;
+      let parMidPoint = getPoint(fromPoint.x, yMiddle);
+      const childMidPoint = getPoint(toPoint.x + curationShift, yMiddle);
+      const endPoint = getPoint(toPoint.x + curationShift, toPoint.y);
+      // если линия проходит через блок, то нужно его обойти
+      if (parMidPoint.y >= fromPoint.y) {
+        createLine(root, fromPoint, parMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parMidPoint, childMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, childMidPoint, endPoint, 'v', lineStyle, lineColor);
+        linesMap.set(key, {
+          parts:
+              [
+                {...fromPoint},
+                {...parMidPoint},
+                {...childMidPoint},
+                {...endPoint},
+              ],
+          lineStyle: lineStyle,
+          lineColor: lineColor
+        });
+      } else {
+        const parVertMidPoint = getPoint(fromPoint.x, fromPoint.y + IND_HEIGHT + 5);
+        const parHorMidPoint = getPoint(blockFrom.right.x + curationShift, parVertMidPoint.y);
+        let parMidPoint = getPoint(parHorMidPoint.x, yMiddle);
+        createLine(root, fromPoint, parVertMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parVertMidPoint, parHorMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, parHorMidPoint, parMidPoint, 'v', lineStyle, lineColor);
+        createLine(root, parMidPoint, childMidPoint, 'h', lineStyle, lineColor);
+        createLine(root, childMidPoint, endPoint, 'v', lineStyle, lineColor);
+        linesMap.set(key, {
+          parts:
+              [
+                {...fromPoint},
+                {...parVertMidPoint},
+                {...parHorMidPoint},
+                {...parMidPoint},
+                {...childMidPoint},
+                {...endPoint},
+              ],
+          lineStyle: lineStyle,
+          lineColor: lineColor
+        });
+      }
+
+    } else {
+      const topAreaPoint = getPoint(fromPoint.x, orgUnitArea.y - stdNodeShift);
+      const topLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, orgUnitArea.y - stdNodeShift);
+      const bottomLeftAreaPoint = getPoint(orgUnitArea.x - stdNodeShift * 2, toPoint.y - stdNodeShift);
+      const bottomAreaPoint = getPoint(toPoint.x, toPoint.y - stdNodeShift);
+      createLine(root, fromPoint, topAreaPoint, 'v', lineStyle, lineColor);
+      createLine(root, topAreaPoint, topLeftAreaPoint, 'h', lineStyle, lineColor);
+      createLine(root, topLeftAreaPoint, bottomLeftAreaPoint, 'v', lineStyle, lineColor);
+      createLine(root, bottomLeftAreaPoint, bottomAreaPoint, 'h', lineStyle, lineColor);
+      createLine(root, bottomAreaPoint, toPoint, 'v', lineStyle, lineColor);
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...topAreaPoint},
+              {...topLeftAreaPoint},
+              {...bottomLeftAreaPoint},
+              {...bottomAreaPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+    }
+  }
+
+  // TODO временное решение
+  if (fromSide === BOTTOM && toSide === LEFT) {
+    // // блок снизу
+    // const fromPointX = fromPoint.x + 10;
+    // if (fromPoint.y > toPoint.y) {
+    //   if (!orgUnitArea) {
+    //
+    //   } else {
+    //     const topAreaPoint = getPoint(fromPointX, orgUnitArea.y - curationNodeShift);
+    //     if ()
+    //   }
+    //   // правее
+    //
+    //   // левее
+    // }
+    // //
+  }
+
+  if (fromSide === LEFT && toSide === LEFT) {
+    // блок снизу и правее
+    if (toPoint.x >= fromPoint.x ) {
+      const parMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y);
+      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, toPoint.y);
+      createLine(root, fromPoint, parMidPoint, 'h');
+      createLine(root, parMidPoint, childMidPoint, 'v');
+      createLine(root, childMidPoint, toPoint, 'h');
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...parMidPoint},
+              {...childMidPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+    }
+  }
+
+  if (fromSide === RIGHT && toSide === LEFT) {
+    if (Math.abs(fromPoint.y - toPoint.y) < 15) {
+      toPoint.y += (fromPoint.y - toPoint.y);
+      createLine(root, fromPoint, toPoint, 'h');
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+      return;
+    }
+    // блок снизу и правее
+    if (toPoint.x >= fromPoint.x ) {
+      const parMidPoint = getPoint(toPoint.x - stdNodeShift, fromPoint.y);
+      const childMidPoint = getPoint(toPoint.x - stdNodeShift, toPoint.y);
+      createLine(root, fromPoint, parMidPoint, 'h');
+      createLine(root, parMidPoint, childMidPoint, 'v');
+      createLine(root, childMidPoint, toPoint, 'h');
+      linesMap.set(key, {
+        parts:
+            [
+              {...fromPoint},
+              {...parMidPoint},
+              {...childMidPoint},
+              {...toPoint},
+            ],
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+    }
+  }
+};
+
+export const createCurationConnector = ( root,
+                                         blockParamsMap,
+                                         linesMap,
+                                         orgUnitArea,
+                                         blockFrom,
+                                         blockTo,
+                                         fromSide,
+                                         toSide ) => {
+
+  const fromPoint = getPointOfSide(blockFrom, fromSide);
+  const toPoint = getPointOfSide(blockTo, toSide);
+  const key = blockFrom.id + '/' + blockTo.id;
+
+  let lineStyle = 'dashed';
+  let lineColor = 'blue';
+
+  let stdNodeShift = 15;
+
+
+  const siblingBlockParams = [];
+  // для блоков заместителей без потомков нужно проверить,
+  // что выходящая линия не пересекает других таких заместителей
+  if (blockFrom.type === BLOCK_TYPES.deputy) {
+    const blockFromParentId = blockFrom.id.split('/')[0];
+
+    blockParamsMap.forEach((value, key) => {
+      if (key.split('/')[0] === blockFromParentId) {
+        siblingBlockParams.push(value);
+      }
+    })
+
+    if (siblingBlockParams.length && siblingBlockParams.filter(block => block.y > fromPoint.y)) {
+
+    }
+  }
+
+  if (fromSide === BOTTOM && toSide === TOP) {
+
+    // точки соединения смещены относительно друг-друга
+    if (!orgUnitArea) {
+
       if (curationLine) {
         if (fromPoint.x > toPoint.x) {
           fromPoint.x -= 5;
@@ -501,81 +716,6 @@ export const createUpsideDownConnector = ( root,
     }
   }
 
-  // TODO временное решение
-  if (fromSide === BOTTOM && toSide === LEFT) {
-    // // блок снизу
-    // const fromPointX = fromPoint.x + 10;
-    // if (fromPoint.y > toPoint.y) {
-    //   if (!orgUnitArea) {
-    //
-    //   } else {
-    //     const topAreaPoint = getPoint(fromPointX, orgUnitArea.y - curationNodeShift);
-    //     if ()
-    //   }
-    //   // правее
-    //
-    //   // левее
-    // }
-    // //
-  }
-
-  if (fromSide === LEFT && toSide === LEFT) {
-    // блок снизу и правее
-    if (toPoint.x >= fromPoint.x ) {
-      const parMidPoint = getPoint(fromPoint.x - stdNodeShift, fromPoint.y);
-      const childMidPoint = getPoint(fromPoint.x - stdNodeShift, toPoint.y);
-      createLine(root, fromPoint, parMidPoint, 'h');
-      createLine(root, parMidPoint, childMidPoint, 'v');
-      createLine(root, childMidPoint, toPoint, 'h');
-      linesMap.set(key, {
-        parts:
-            [
-              {...fromPoint},
-              {...parMidPoint},
-              {...childMidPoint},
-              {...toPoint},
-            ],
-        lineStyle: lineStyle,
-        lineColor: lineColor
-      });
-    }
-  }
-
-  if (fromSide === RIGHT && toSide === LEFT) {
-    if (Math.abs(fromPoint.y - toPoint.y) < 15) {
-      toPoint.y += (fromPoint.y - toPoint.y);
-      createLine(root, fromPoint, toPoint, 'h');
-      linesMap.set(key, {
-        parts:
-            [
-              {...fromPoint},
-              {...toPoint},
-            ],
-        lineStyle: lineStyle,
-        lineColor: lineColor
-      });
-      return;
-    }
-    // блок снизу и правее
-    if (toPoint.x >= fromPoint.x ) {
-      const parMidPoint = getPoint(toPoint.x - stdNodeShift, fromPoint.y);
-      const childMidPoint = getPoint(toPoint.x - stdNodeShift, toPoint.y);
-      createLine(root, fromPoint, parMidPoint, 'h');
-      createLine(root, parMidPoint, childMidPoint, 'v');
-      createLine(root, childMidPoint, toPoint, 'h');
-      linesMap.set(key, {
-        parts:
-            [
-              {...fromPoint},
-              {...parMidPoint},
-              {...childMidPoint},
-              {...toPoint},
-            ],
-        lineStyle: lineStyle,
-        lineColor: lineColor
-      });
-    }
-  }
 };
 
 /**
@@ -620,7 +760,7 @@ export const getFullHeight = (areaMap) => {
 
 export const getFullWidthHeight = (parent, blockParamsMap, structuralUnitsAreaMap, assignedStaffAreaMap, orgUnitsAreaMap) => {
   let fullWidth = 0;
-  let fullHeight = 0;
+  let fullHeight;
   let parentBlockParams = blockParamsMap.get(parent.id);
   if (!parent.children.length) {
     fullHeight = parentBlockParams.bottom + IND_HEIGHT;
@@ -649,66 +789,10 @@ export const getFullWidthHeight = (parent, blockParamsMap, structuralUnitsAreaMa
 };
 
 /**
- * Отрисовка блока штампа
- * @param {Number} x
- * @param {Number} y
- * @param {Number} width
- * @param {String} name
- * @param {Array} properties
- * @return {HTMLElement}
+ *
+ * @param {OFMData[]} children
+ * @param {string} parentId
  */
-export const createStampBlock = (x, y, width, name, properties) => {
-  const outerBlock = document.createElement(`div`);
-  outerBlock.setAttribute(`class`, `stamp_block`);
-  outerBlock.style.left = `${x}px`;
-  outerBlock.style.top = `${y}px`;
-  outerBlock.style.width = `${width}px`;
-  outerBlock.style.borderWidth = `1px`;
-
-  root.appendChild(outerBlock);
-
-  const titleBlock = document.createElement(`div`);
-  titleBlock.setAttribute(`class`, `name_block`);
-  titleBlock.textContent = name;
-  titleBlock.style.width = `${width}px`;
-  outerBlock.appendChild(titleBlock);
-
-  const rowHeight = 20;
-  let top = titleBlock.clientHeight + 10;
-  properties.forEach((prop) => {
-    const rowBlock = document.createElement(`div`);
-    rowBlock.setAttribute(`class`, `property_block`);
-    rowBlock.style.width = `${width}px`;
-    rowBlock.style.height = `${rowHeight}px`;
-    rowBlock.style.top = `${top}px`;
-
-    const propNameBlock = document.createElement(`div`);
-    propNameBlock.style.width = `${width - 130}px`;
-
-    const propName = document.createElement(`p`);
-    propName.setAttribute(`class`, `prop_name prop`);
-    propName.textContent = prop.name;
-    propNameBlock.appendChild(propName);
-
-    const propValueBlock = document.createElement(`div`);
-    propValueBlock.style.left = `${width - 130}px`;
-    propValueBlock.style.width = `${130}px`;
-    const propValue = document.createElement(`p`);
-    propValue.setAttribute(`class`, `prop_value prop`);
-    propValue.textContent = prop.value;
-    propValueBlock.appendChild(propValue);
-
-    rowBlock.appendChild(propNameBlock);
-    rowBlock.appendChild(propValueBlock);
-
-    outerBlock.appendChild(rowBlock);
-
-    top += rowHeight;
-  });
-  outerBlock.bottom = top - y;
-  return outerBlock;
-};
-
 export const setExtId = (children, parentId) => {
   children.forEach((child) => {
     const newId = `${parentId}/${child.id}`;
@@ -719,8 +803,8 @@ export const setExtId = (children, parentId) => {
 
 /**
  *
- * @param children
- * @param blockParamsMap
+ * @param {OFMData[]} children
+ * @param {Map} blockParamsMap
  * @return {number}
  */
 export const getHorizontalShiftFromChildren = (children, blockParamsMap) => {
@@ -736,105 +820,76 @@ export const getHorizontalShiftFromChildren = (children, blockParamsMap) => {
 
     if (!!childBlockParams) {
       const childrenHorizontalShift = getHorizontalShiftFromChildren(child.children, blockParamsMap);
-
-      if (maxChildrenHorizontalShift < childrenHorizontalShift) {
-        maxChildrenHorizontalShift = childrenHorizontalShift;
-      }
-
-      if (currentHorizontalShift < childBlockParams.right.x) {
-        currentHorizontalShift = childBlockParams.right.x;
-      }
+      maxChildrenHorizontalShift = Math.max(maxChildrenHorizontalShift, childrenHorizontalShift);
+      currentHorizontalShift = Math.max(currentHorizontalShift, childBlockParams.right.x);
     }
   });
-
-  if (maxChildrenHorizontalShift > currentHorizontalShift) {
-    currentHorizontalShift = maxChildrenHorizontalShift;
-  }
+  currentHorizontalShift = Math.max(currentHorizontalShift, maxChildrenHorizontalShift);
 
   return currentHorizontalShift;
 };
 
 /**
  *
- * @param children
- * @param blockParamsMap
+ * @param {OFMData[]} children
+ * @param {Map} blockParamsMap
  * @return {*|number|number}
  */
 export const getVerticalShiftFromChildren = (children, blockParamsMap) => {
-
-  let currentVerticalShift = 0;
-  let maxChildrenVerticalShift = 0;
-
   if (!children.length) {
     return 0;
   }
+
+  let currentVerticalShift = 0;
+  let maxChildrenVerticalShift = 0;
 
   children.forEach((child) => {
     const childBlockParams = blockParamsMap.get(child.id);
 
     if (!!childBlockParams) {
       const childrenVerticalShift = getVerticalShiftFromChildren(child.children, blockParamsMap);
-
-      if (maxChildrenVerticalShift < childrenVerticalShift) {
-        maxChildrenVerticalShift = childrenVerticalShift;
-      }
-
-      if (currentVerticalShift < childBlockParams.bottom.y) {
-        currentVerticalShift = childBlockParams.bottom.y;
-      }
+      maxChildrenVerticalShift = Math.max(maxChildrenVerticalShift, childrenVerticalShift);
+      currentVerticalShift = Math.max(currentVerticalShift, childBlockParams.bottom.y);
     }
   });
-
-  if (maxChildrenVerticalShift > currentVerticalShift) {
-    currentVerticalShift = maxChildrenVerticalShift;
-  }
+  currentVerticalShift = Math.max(maxChildrenVerticalShift, currentVerticalShift);
 
   return currentVerticalShift;
 };
 
 /**
  *
- * @param children
- * @param blockParamsMap
+ * @param {OFMData[]} children
+ * @param {Map} blockParamsMap
  * @return {number}
  */
 export const getLowestLeftFromChildren = (children, blockParamsMap) => {
-
-  let currentLeft = 100000;
-  let lowestChildrenVerticalShift = 1000000;
-
   if (!children.length) {
     return 100000;
   }
+
+  let currentLeft = 100000;
+  let lowestChildrenLeft = 1000000;
 
   children.forEach((child) => {
     const childBlockParams = blockParamsMap.get(child.id);
 
     if (!!childBlockParams) {
       const childrenLeft = getLowestLeftFromChildren(child.children, blockParamsMap);
-
-      if (lowestChildrenVerticalShift > childrenLeft) {
-        lowestChildrenVerticalShift = childrenLeft;
-      }
-
-      if (currentLeft > childBlockParams.left.x) {
-        currentLeft = childBlockParams.left.x;
-      }
+      lowestChildrenLeft = Math.min(lowestChildrenLeft, childrenLeft);
+      currentLeft = Math.min(currentLeft, childBlockParams.left.x);
     }
   });
-
-  if (lowestChildrenVerticalShift < currentLeft) {
-    currentLeft = lowestChildrenVerticalShift;
-  }
+  currentLeft = Math.min(currentLeft, lowestChildrenLeft);
 
   return currentLeft;
 };
 
 /**
  *
- * @param parent
- * @param blockParamsMap
- * @return {Map}
+ * @param {OFMData} parent
+ * @param {Map} blockParamsMap
+ * @return {Object[]}
  */
 export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
 
@@ -847,10 +902,9 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
     childrenBlocksArea.y = parentBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
   } else {
     const deputy = parent.children.filter((child) => child.type === BLOCK_TYPES.deputy);
-    const notDeputy = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy);
+    const notDeputy = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE);
 
     let deputyBottomY = getVerticalShiftFromChildren(deputy, blockParamsMap);
-    // let deputyRightX = getHorizontalShiftFromChildren(deputy, blockParamsMap);
 
     const firstNotDeputy = notDeputy[0] ? blockParamsMap.get(notDeputy[0].id) : undefined;
     let notDeputyBottomY = getVerticalShiftFromChildren(notDeputy, blockParamsMap);
@@ -861,17 +915,18 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
     childrenBlocksArea.x = !notDeputyLeftX ? parentBlockParams.x : notDeputyLeftX;
     childrenBlocksArea.y = (!firstNotDeputy || !firstNotDeputy.y) ? deputyBottomY : firstNotDeputy.y;
     childrenBlocksArea.width = !notDeputyRightX ? 0 : notDeputyRightX - childrenBlocksArea.x;
-    childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - parentBlockParams.bottom.y;
+    !deputyBottomY
+      ? childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - parentBlockParams.bottom.y
+      : childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - deputyBottomY;
 
     childrenBlocksAreas.push(childrenBlocksArea);
     parent.children
-      .filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === GOVERNANCE)
+      .filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE)
       .forEach((child) => {
-
-      const nestedChildrenBlockAreas = getChildrenBlocksAreas(child, blockParamsMap);
-      if (nestedChildrenBlockAreas.length > 0) {
-         childrenBlocksAreas = [...childrenBlocksAreas, ...nestedChildrenBlockAreas];
-      }
+        const nestedChildrenBlockAreas = getChildrenBlocksAreas(child, blockParamsMap);
+        if (nestedChildrenBlockAreas.length > 0) {
+           childrenBlocksAreas = [...childrenBlocksAreas, ...nestedChildrenBlockAreas];
+        }
     });
   }
 
@@ -880,7 +935,7 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
 
 /**
  *
- * @param parent
+ * @param {OFMData} parent
  * @param additionalInfo
  */
 export const getChildrenByAdditionalInfo = (parent, additionalInfo) => {
