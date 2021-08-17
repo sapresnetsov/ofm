@@ -61,4 +61,3 @@
  * @property {OFMData.additionalInfo} additionalInfo
  * @property {OFMData.indicators} indicators
  */
-
