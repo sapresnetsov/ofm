@@ -550,7 +550,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   });
 
   // отрисовка линий к структурным подразделениям
-  const structuralUnits = parent.children.filter((child) => child.additionalInfo === OTYPES.STRUCTURAL_UNIT);
+  const structuralUnits = parent.children.filter((child) => child.additionalInfo === ADDITIONAL_INFO.STRUCTURAL_UNIT);
   if (parent.otype === OTYPES.POSITION) {
     if (assignedStaffArea && assignedStaffArea.width && (!orgUnitArea || !orgUnitArea.width)) {
       tempOrgUnit = {...assignedStaffArea};
