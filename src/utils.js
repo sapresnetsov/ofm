@@ -276,6 +276,8 @@ export const appendBlock = ( left,
  *  toPdf: boolean,
  *  deleteTechBlock: boolean,
  *  submitToImage: boolean
+ *  assignedStaffLabel: string,
+ *  structuralUnitsLabel: string,
  *  }}
  */
 export const getDataFromDOM = () => {
@@ -289,8 +291,10 @@ export const getDataFromDOM = () => {
   const toPdf = getDomValue('toPdf') === 'true';
   const deleteTechBlock = getDomValue('deleteTechBlock') === 'true';
   const submitToImage = getDomValue('submitToImage') === 'true';
+  const assignedStaffLabel = getDomValue('assignedStaffLabel');
+  const structuralUnitsLabel = getDomValue('structuralUnitsLabel');
 
-  return {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock, submitToImage};
+  return { ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock, submitToImage, assignedStaffLabel, structuralUnitsLabel};
 };
 
 /**
@@ -817,19 +821,10 @@ export const getHorizontalShiftFromChildren = (children, blockParamsMap) => {
     if (!!childBlockParams) {
       const childrenHorizontalShift = getHorizontalShiftFromChildren(child.children, blockParamsMap);
       maxChildrenHorizontalShift = Math.max(maxChildrenHorizontalShift, childrenHorizontalShift);
-      // if (maxChildrenHorizontalShift < childrenHorizontalShift) {
-      //   maxChildrenHorizontalShift = childrenHorizontalShift;
-      // }
       currentHorizontalShift = Math.max(currentHorizontalShift, childBlockParams.right.x);
-      // if (currentHorizontalShift < childBlockParams.right.x) {
-      //   currentHorizontalShift = childBlockParams.right.x;
-      // }
     }
   });
   currentHorizontalShift = Math.max(currentHorizontalShift, maxChildrenHorizontalShift);
-  // if (maxChildrenHorizontalShift > currentHorizontalShift) {
-  //   currentHorizontalShift = maxChildrenHorizontalShift;
-  // }
 
   return currentHorizontalShift;
 };
@@ -857,7 +852,7 @@ export const getVerticalShiftFromChildren = (children, blockParamsMap) => {
       currentVerticalShift = Math.max(currentVerticalShift, childBlockParams.bottom.y);
     }
   });
-  maxChildrenVerticalShift = Math.max(maxChildrenVerticalShift, currentVerticalShift);
+  currentVerticalShift = Math.max(maxChildrenVerticalShift, currentVerticalShift);
 
   return currentVerticalShift;
 };
@@ -907,7 +902,7 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
     childrenBlocksArea.y = parentBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
   } else {
     const deputy = parent.children.filter((child) => child.type === BLOCK_TYPES.deputy);
-    const notDeputy = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy);
+    const notDeputy = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE);
 
     let deputyBottomY = getVerticalShiftFromChildren(deputy, blockParamsMap);
 
@@ -920,7 +915,9 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
     childrenBlocksArea.x = !notDeputyLeftX ? parentBlockParams.x : notDeputyLeftX;
     childrenBlocksArea.y = (!firstNotDeputy || !firstNotDeputy.y) ? deputyBottomY : firstNotDeputy.y;
     childrenBlocksArea.width = !notDeputyRightX ? 0 : notDeputyRightX - childrenBlocksArea.x;
-    childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - parentBlockParams.bottom.y;
+    !deputyBottomY
+      ? childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - parentBlockParams.bottom.y
+      : childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - deputyBottomY;
 
     childrenBlocksAreas.push(childrenBlocksArea);
     parent.children

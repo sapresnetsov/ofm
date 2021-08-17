@@ -184,3 +184,9 @@ p.prop_name {
 .submit_to_image_button_img:hover {
     opacity: 1;
 }
+
+p.area_name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: bold;
+}

@@ -1,4 +1,5 @@
 import { BORDER_WIDTH } from "../model/constants";
+import { getPoint } from "../utils";
 
 /**
  * Перевод HTML на канву
@@ -10,6 +11,8 @@ import { BORDER_WIDTH } from "../model/constants";
  * @param {Map} blockParamsMap
  * @param {Map} linesMap
  * @param {HTMLElement} stampBlock
+ * @param {number} assignedStaffAreaTop
+ * @param {number} structuralUnitsAreaTop
  */
 export const translateHTMLToCanvas = ( root,
                                        ofmTitle,
@@ -18,7 +21,9 @@ export const translateHTMLToCanvas = ( root,
                                        blocksMap,
                                        blockParamsMap,
                                        linesMap,
-                                       stampBlock ) => {
+                                       stampBlock,
+                                       assignedStaffAreaTop,
+                                       structuralUnitsAreaTop) => {
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -48,7 +53,20 @@ export const translateHTMLToCanvas = ( root,
             });
         });
     }
-
+    if (assignedStaffAreaTop) {
+        canvasDrawLine(ctx, getPoint(0, assignedStaffAreaTop), getPoint(width, assignedStaffAreaTop), 'dashed', 'black');
+        ctx.beginPath();
+        ctx.font = '15px bold';
+        ctx.textAlign = 'left';
+        ctx.fillText('Приписной штат', 50, assignedStaffAreaTop + 10);
+    }
+    if (structuralUnitsAreaTop) {
+        canvasDrawLine(ctx, getPoint(0, structuralUnitsAreaTop), getPoint(width, structuralUnitsAreaTop), 'dashed', 'black');
+        ctx.beginPath();
+        ctx.font = '15px bold';
+        ctx.textAlign = 'left';
+        ctx.fillText('Структурные подразделения', 50, structuralUnitsAreaTop + 10);
+    }
     return canvas
 };
 
@@ -298,7 +316,7 @@ const canvasDrawStamp = (ctx, stampStyle, stampTitle, stampRows) => {
                             textY,
                             width,
                             titleObject );
-    stampRows.forEach((stampRow, index) => {
+    Array.prototype.forEach.call(stampRows, (stampRow, index) => {
         if (index > 0) {
             const propNameStyle = window.getComputedStyle(stampRow.childNodes[0])
             const propNameObject = {
@@ -324,5 +342,32 @@ const canvasDrawStamp = (ctx, stampStyle, stampTitle, stampRows) => {
                 propNameObject,
                 propValueObject);
         }
-    });
+    })
+    // stampRows.forEach((stampRow, index) => {
+    //     if (index > 0) {
+    //         const propNameStyle = window.getComputedStyle(stampRow.childNodes[0])
+    //         const propNameObject = {
+    //             font: `bold ${propNameStyle.fontSize} ${propNameStyle.fontFamily}`,
+    //             text: stampRow.childNodes[0].textContent,
+    //             width: parseInt(propNameStyle.width, 10),
+    //             height: parseInt(propNameStyle.height, 10),
+    //             paddingTop: parseInt(propNameStyle.paddingTop, 10),
+    //             paddingBottom: parseInt(propNameStyle.paddingBottom, 10),
+    //         };
+    //         const propValueStyle = window.getComputedStyle(stampRow.childNodes[1])
+    //         const propValueObject = {
+    //             font: `${propValueStyle.fontSize} ${propValueStyle.fontFamily}`,
+    //             text: stampRow.childNodes[1].textContent,
+    //             width: parseInt(propValueStyle.width, 10),
+    //             height: parseInt(propValueStyle.height, 10),
+    //             paddingTop: parseInt(propValueStyle.paddingTop, 10),
+    //             paddingBottom: parseInt(propValueStyle.paddingBottom, 10),
+    //         };
+    //         textY = stampDrawProp( ctx,
+    //             textX,
+    //             textY,
+    //             propNameObject,
+    //             propValueObject);
+    //     }
+    // });
 };

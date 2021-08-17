@@ -45,7 +45,7 @@ export const drawScheme = () => {
   const assignedStaffAreaMap = new Map();
   const structuralUnitsAreaMap = new Map();
 
-  const {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, submitToImage} = getDataFromDOM();
+  const {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, submitToImage, assignedStaffLabel, structuralUnitsLabel} = getDataFromDOM();
 
   if (!ofmDataStr) {
     return;
@@ -92,16 +92,17 @@ export const drawScheme = () => {
   });
 
   // отрисовка приписного штата
-  let verticalShift = getVerticalShiftFromChildren(parent.children, blockParamsMap) + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
-  //TODO добавить вывод приписного штата
+  let verticalShift = getVerticalShiftFromChildren(parent.children, blockParamsMap) + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS * 2;
+  const assignedStaffAreaTop = verticalShift;
   drawAssignedStaffBlocks(blocksMap, blockParamsMap, parent, parentBlockParams, governanceAreaMap, verticalShift);
 
   // отрисовка структурных подразделений
-  verticalShift = getVerticalShiftFromChildren(parent.children, blockParamsMap) + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+  verticalShift = getVerticalShiftFromChildren(parent.children, blockParamsMap) + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS * 2;
+  const structuralUnitsAreaTop = verticalShift;
   drawStructuralUnitBlocks(blocksMap, blockParamsMap, parent, parentBlockParams, governanceAreaMap, verticalShift);
 
   const fullWidth = getHorizontalShiftFromChildren(parent.children, blockParamsMap);
-  const fullHeight = getVerticalShiftFromChildren(parent.children, blockParamsMap);
+  const fullHeight = getVerticalShiftFromChildren(parent.children, blockParamsMap) + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS * 2;
 
   blockParamsMap.set(parent.id, getBlockParams(parentBlock, parent, 0));
   parentBlockParams = blockParamsMap.get(parent.id);
@@ -111,10 +112,13 @@ export const drawScheme = () => {
   drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
 
   // отрисовка разеделителей областей с приписным штатом/ структурными подразделениями
-  //TODO переделать/ скорректировать получение зон
+  let assignedStaffAreaTopSeparator = 0;
+  let structuralUnitsAreaTopSeparator = 0;
   if (drawSeparators) {
-    drawAreaSeparator(assignedStaffAreaMap, fullWidth);
-    drawAreaSeparator(structuralUnitsAreaMap, fullWidth);
+    assignedStaffAreaTopSeparator = assignedStaffAreaTop - 40;
+    structuralUnitsAreaTopSeparator = structuralUnitsAreaTop - 40;
+    drawAreaSeparator(assignedStaffAreaMap, fullWidth, assignedStaffAreaTopSeparator, assignedStaffLabel);
+    drawAreaSeparator(structuralUnitsAreaMap, fullWidth, structuralUnitsAreaTopSeparator, structuralUnitsLabel);
   }
 
   // сохранение разметки
@@ -124,20 +128,34 @@ export const drawScheme = () => {
 
   // формирование канвы для получения изображения
   if (toImage) {
-    const canvas = translateHTMLToCanvas(document.body, ofmTitle, fullWidth, fullHeight, blocksMap, blockParamsMap, linesMap, stampBlock);
+    const canvas = translateHTMLToCanvas( document.body,
+                                          ofmTitle,
+                                          fullWidth,
+                                          fullHeight,
+                                          blocksMap,
+                                          blockParamsMap,
+                                          linesMap,
+                                          stampBlock,
+                                          assignedStaffAreaTopSeparator,
+                                          structuralUnitsAreaTopSeparator );
     if (!submitToImage) {
       canvas.toBlob((blob) => {
         FileSaver.saveAs(blob, `${ofmTitle}.png`);
       });
     } else {
       createSubmitToImageButton(() => canvas.toBlob((blob) => {
-        let URLObj = window.URL || window.webkitURL;
-        let a = document.createElement("a");
-        a.href = URLObj.createObjectURL(blob);
-        a.download = `${ofmTitle}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const fileName = `${ofmTitle}.png`;
+        if(window.navigator.msSaveOrOpenBlob) {
+          window.navigator.msSaveOrOpenBlob(blob, fileName);
+        } else {
+          let URLObj = window.URL || window.webkitURL;
+          let a = document.createElement("a");
+          a.href = URLObj.createObjectURL(blob);
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
       }));
     }
 
@@ -356,7 +374,16 @@ const drawDeputy = (blocksMap, blockParamsMap, parent, parentParams) => {
   return verticalDiff > 0 ? verticalDiff : 0;
 };
 
-
+/**
+ *
+ * @param blocksMap
+ * @param blockParamsMap
+ * @param parent
+ * @param parentBlockParams
+ * @param governanceBlocksArea
+ * @param initialVerticalShift
+ * @return {number}
+ */
 const drawAssignedStaffBlocks = ( blocksMap,
                                   blockParamsMap,
                                   parent,
@@ -367,14 +394,8 @@ const drawAssignedStaffBlocks = ( blocksMap,
   const children = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy
                                                      && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE);
 
-  const childrenCount = children.length;
-  if (childrenCount === 0) {
-    return 0;
-  }
-
   let childrenDrawnInline = false;
   let childrenInlineCount = 0;
-  let inlineMaxVerticalShift = 0;
 
   const width = parentBlockParams.width - LEVEL_WIDTH_STEP;
   const height = MIN_BLOCK_HEIGHT;
@@ -394,49 +415,64 @@ const drawAssignedStaffBlocks = ( blocksMap,
   });
 
   const parentBlockArea = governanceBlocksArea.get(parent.id);
-  const initX = parentBlockArea.x;
+  const initX = (parentBlockArea ? parentBlockArea.x : parentBlockParams.x) + LEVEL_WIDTH_STEP / 2;
   const initY = initialVerticalShift;
   let x = initX;
   let y = verticalShiftFromChildren || initY;
-  y = Math.max(y, parentBlockArea.y + parentBlockArea.height);
+  if (parentBlockArea) {
+    y = Math.max(y, parentBlockArea.y + parentBlockArea.height);
+  }
 
-  const structuralUnits = parent.children.filter((child) => child.additionalInfo === ADDITIONAL_INFO.ASSIGNED_STAFF);
-  let structuralUnitsVerticalShift = 0;
+  const assignedStaffUnits = parent.children.filter((child) => child.additionalInfo === ADDITIONAL_INFO.ASSIGNED_STAFF);
+  if (assignedStaffUnits.length === 0) {
+    return 0;
+  }
+  let assignedStaffUnitsVerticalShift = 0;
 
-  const inlineMaxCount = Math.floor(parentBlockArea.width / width);
-  if (inlineMaxCount > 1 && structuralUnits.length > 1) {
+  const inlineMaxCount = parentBlockArea ? Math.floor(parentBlockArea.width / width) : 1;
+  if (inlineMaxCount > 1 && assignedStaffUnits.length > 1) {
     childrenDrawnInline = true;
   }
 
-  structuralUnits.forEach((structuralUnit) => {
-    const structuralUnitBlock = appendBlock(x, y, width, height, structuralUnit, blocksMap, blockParamsMap, parentBlockParams);
-    const structuralUnitBlockParams = blockParamsMap.get(structuralUnit.id);
-    const childHeight = structuralUnitBlock.children[0].clientHeight;
+  let maxVerticalShiftFromChildren = 0;
+  assignedStaffUnits.forEach((assignedStaffUnit) => {
+    const assignedStaffBlock = appendBlock(x, y, width, height, assignedStaffUnit, blocksMap, blockParamsMap, parentBlockParams);
+    const assignedStaffBlockParams = blockParamsMap.get(assignedStaffUnit.id);
+    const childHeight = assignedStaffBlock.children[0].clientHeight;
+    let verticalShiftFromChildren = 0;
 
     if (!childrenDrawnInline) {
-      y = structuralUnitBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+      y = assignedStaffBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
     } else {
-      if (childHeight > structuralUnitsVerticalShift) {
-        structuralUnitsVerticalShift = childHeight;
-      }
+      assignedStaffUnitsVerticalShift = Math.max(assignedStaffUnitsVerticalShift, childHeight);
       childrenInlineCount++;
 
-      const horizontalShift = structuralUnitBlockParams.right.x;
+      const horizontalShift = assignedStaffBlockParams.right.x;
 
       // в один ряд выводится не больше n блоков
       if (childrenInlineCount < inlineMaxCount) {
         x = horizontalShift + H_SPACE_BETWEEN_BLOCKS;
       } else {
         x = initX;
-        y += structuralUnitsVerticalShift + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+        y += assignedStaffUnitsVerticalShift + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
         childrenInlineCount = 0;
-        inlineMaxVerticalShift = 0;
       }
+    }
+    verticalShiftFromChildren = drawAssignedStaffBlocks( blocksMap,
+                                                         blockParamsMap,
+                                                         assignedStaffUnit,
+                                                         assignedStaffBlockParams,
+                                                         governanceBlocksArea,
+                                            assignedStaffBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS );
+
+    maxVerticalShiftFromChildren = Math.max(maxVerticalShiftFromChildren, verticalShiftFromChildren);
+    if (maxVerticalShiftFromChildren && (!childrenDrawnInline || childrenInlineCount === 0)) {
+      y = maxVerticalShiftFromChildren;
+      maxVerticalShiftFromChildren = 0;
     }
   });
 
   return y;
-
 }
 
 /**
@@ -795,19 +831,22 @@ const shiftOtherUnitsDown = ( blocksMap,
  * Разделитель для зон блоков
  * @param {Map} areaMap
  * @param {number} fullWidth
+ * @param {number} areaTop
+ * @param {String} areaName
  */
-const drawAreaSeparator = (areaMap, fullWidth) => {
-  if (areaMap.size > 0) {
-    let areaTop;
-    const shift = AREA_SHIFT + 20;
-    areaMap.forEach((area) => {
-      if (!areaTop) {
-        areaTop = area.y;
-      }
-    });
-    if (areaTop) {
-      createLine(root, {x: 0, y: areaTop - shift}, {x: fullWidth, y: areaTop - shift}, 'h', 'dashed');
-    }
+const drawAreaSeparator = (areaMap, fullWidth, areaTop, areaName) => {
+  if (areaTop) {
+    const areaNameBlock = document.createElement(`div`);
+    areaNameBlock.style.left = `50px`;
+    areaNameBlock.style.top = `${areaTop}px`;
+    areaNameBlock.style.width = `250px`;
+
+    const areaNameP = document.createElement(`p`);
+    areaNameP.setAttribute(`class`, `area_name`)
+    areaNameP.textContent = areaName;
+    areaNameBlock.appendChild(areaNameP);
+    root.appendChild(areaNameBlock);
+    createLine(root, {x: 0, y: areaTop}, {x: fullWidth, y: areaTop}, 'h', 'dashed');
   }
 };
 
