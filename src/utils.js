@@ -294,7 +294,18 @@ export const getDataFromDOM = () => {
   const assignedStaffLabel = getDomValue('assignedStaffLabel');
   const structuralUnitsLabel = getDomValue('structuralUnitsLabel');
 
-  return { ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, deleteTechBlock, submitToImage, assignedStaffLabel, structuralUnitsLabel};
+  return { ofmDataStr,
+           ofmTitle,
+           ofmStampStr,
+           maxDepth,
+           drawSeparators,
+           saveToDom,
+           toImage,
+           toPdf,
+           deleteTechBlock,
+           submitToImage,
+           assignedStaffLabel,
+           structuralUnitsLabel };
 };
 
 /**

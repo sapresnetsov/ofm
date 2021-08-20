@@ -120,5 +120,8 @@ export const shiftStampRight = (stampBlock, parent, parentBlockParams, fullWidth
             }
         });
         stampBlock.style.left = `${newStampBlockLeft}px`;
+
+        return Math.max(fullWidth, parseInt(stampBlock.style.left, 10) + parseInt(stampBlock.style.width, 10));
     }
+    return fullWidth;
 };

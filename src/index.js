@@ -87,22 +87,41 @@ export const drawScheme = () => {
 
   // отрисовка приписного штата
   let verticalShift = getVerticalShiftFromChildren(parent.children, blockParamsMap) + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS * 2;
-  const assignedStaffAreaTop = verticalShift;
-  drawOtherUnitsBlocks(blocksMap, blockParamsMap, parent, parentBlockParams, governanceAreaMap, verticalShift, ADDITIONAL_INFO.ASSIGNED_STAFF);
+  const assignedStaffAreaBottom = drawOtherUnitsBlocks( blocksMap,
+                                                        blockParamsMap,
+                                                        parent,
+                                                        parentBlockParams,
+                                                        governanceAreaMap,
+                                                        verticalShift,
+                                                        ADDITIONAL_INFO.ASSIGNED_STAFF );
+  let assignedStaffAreaTop = verticalShift !== assignedStaffAreaBottom ? verticalShift : 0;
 
   // отрисовка структурных подразделений
   verticalShift = getVerticalShiftFromChildren(parent.children, blockParamsMap) + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS * 2;
-  const structuralUnitsAreaTop = verticalShift;
-  drawOtherUnitsBlocks(blocksMap, blockParamsMap, parent, parentBlockParams, governanceAreaMap, verticalShift, ADDITIONAL_INFO.STRUCTURAL_UNIT);
+  const structuralUnitsAreaBottom = drawOtherUnitsBlocks( blocksMap,
+                                                          blockParamsMap,
+                                                          parent,
+                                                          parentBlockParams,
+                                                          governanceAreaMap,
+                                                          verticalShift,
+                                                          ADDITIONAL_INFO.STRUCTURAL_UNIT);
+  let structuralUnitsAreaTop = verticalShift !== structuralUnitsAreaBottom ? verticalShift : 0;
 
-  const fullWidth = getHorizontalShiftFromChildren(parent.children, blockParamsMap);
-  const fullHeight = getVerticalShiftFromChildren(parent.children, blockParamsMap) + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS * 2;
-
+  // получение итоговых параметров корневого блока
   blockParamsMap.set(parent.id, getBlockParams(parentBlock, parent, 0));
   parentBlockParams = blockParamsMap.get(parent.id);
-  // сдвиг штампа в правый угол
-  shiftStampRight(stampBlock, parent, parentBlockParams, fullWidth, blockParamsMap);
 
+  let fullWidth = getHorizontalShiftFromChildren(parent.children, blockParamsMap) || parentBlockParams.x + parentBlockParams.width;
+  let fullHeight = getVerticalShiftFromChildren(parent.children, blockParamsMap);
+  if (!fullHeight) {
+    fullHeight = parentBlockParams.bottom.y + IND_HEIGHT;
+  } else {
+    fullHeight += IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS * 2;
+  }
+
+  // сдвиг штампа в правый угол
+  fullWidth = shiftStampRight(stampBlock, parent, parentBlockParams, fullWidth, blockParamsMap);
+  // отрисовка соединительных линий
   drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
 
   // отрисовка разеделителей областей с приписным штатом/ структурными подразделениями
@@ -422,7 +441,7 @@ const drawOtherUnitsBlocks = ( blocksMap,
 
   const otherUnits = parent.children.filter((child) => child.additionalInfo === additionalInfo);
   if (!otherUnits.length) {
-    return 0;
+    return y;
   }
   let otherUnitsVerticalShift = 0;
 
@@ -743,7 +762,7 @@ const shiftOtherUnitsDown = ( blocksMap,
  * @param {String} areaName
  */
 const drawAreaSeparator = (areaMap, fullWidth, areaTop, areaName) => {
-  if (areaTop) {
+  if (areaTop > 0) {
     const areaNameBlock = document.createElement(`div`);
     areaNameBlock.style.left = `50px`;
     areaNameBlock.style.top = `${areaTop}px`;

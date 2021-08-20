@@ -80,13 +80,25 @@ export const translateHTMLToCanvas = ( root,
  * @param {number} innerPaddingLeft
  * @param {number} innerPaddingRight
  * @param {number} borderWidth
- * @param {number} borderStyle
+ * @param {string} borderStyle
  * @param {string} backgroundColor
  * @param {Object} title
  * @param {Object[]} functions
  * @param {Object[]} indicators
  */
-const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPaddingRight, borderWidth, borderStyle, backgroundColor, title, functions, indicators) => {
+const canvasDrawRect = ( ctx,
+                         x,
+                         y,
+                         width,
+                         height,
+                         innerPaddingLeft,
+                         innerPaddingRight,
+                         borderWidth,
+                         borderStyle,
+                         backgroundColor,
+                         title,
+                         functions,
+                         indicators) => {
     ctx.beginPath();
     let spaceBetweenLines = 0;
     let indVShift = 0;
@@ -100,10 +112,9 @@ const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPadding
             break;
         case 'double':
             ctx.lineWidth = '1';
-            const parsedBorderWidth = borderWidth;
-            if (parsedBorderWidth === BORDER_WIDTH.first) {
+            if (borderWidth === BORDER_WIDTH.first) {
                 spaceBetweenLines = BORDER_WIDTH.first;
-            } else if (parsedBorderWidth === BORDER_WIDTH.second) {
+            } else if (borderWidth === BORDER_WIDTH.second) {
                 spaceBetweenLines = BORDER_WIDTH.second;
             }
             indVShift += 1;
@@ -123,16 +134,15 @@ const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPadding
     const textX = x + innerPaddingLeft + borderWidth;
     let textY = y + borderWidth + title.paddingTop;
     const textWidth = width - innerPaddingLeft - innerPaddingRight;
-    // const titleTextObject = {...title, height: !functions.length ? height - IND_HEIGHT - title.height: title.height }
     const titleTextObject = {...title }
     textY = rectDrawText( ctx,
-        textX,
-        textY,
-        textWidth,
-        innerPaddingLeft,
-        innerPaddingRight,
-        0,
-        titleTextObject);
+                          textX,
+                          textY,
+                          textWidth,
+                          innerPaddingLeft,
+                          innerPaddingRight,
+                          0,
+                          titleTextObject);
 
     // Функции
     if (functions.length > 1) {
@@ -151,6 +161,14 @@ const canvasDrawRect = (ctx, x, y, width, height, innerPaddingLeft, innerPadding
     // индикаторы
     if (indicators. length > 1) {
         let indicatorX = x + 1;
+        if (borderStyle === 'double') {
+            if (borderWidth === BORDER_WIDTH.first) {
+                indicatorX -= 2;
+            } else {
+                indicatorX -= 1;
+            }
+        }
+
         const indicatorY = y + height + borderWidth + indVShift;
         ctx.lineWidth = '1';
         let prevIndX = 0;
