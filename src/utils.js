@@ -906,25 +906,42 @@ export const getChildrenBlocksAreas = (parent, blockParamsMap) => {
 
   let childrenBlocksAreas = [];
   const childrenBlocksArea = {};
-
   const parentBlockParams = blockParamsMap.get(parent.id);
+  const parentBlockParamY = parentBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS
+
   if (!parent.children.length) {
     childrenBlocksArea.x = parentBlockParams.x;
-    childrenBlocksArea.y = parentBlockParams.bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+    childrenBlocksArea.y = parentBlockParamY;
   } else {
     const deputy = parent.children.filter((child) => child.type === BLOCK_TYPES.deputy);
-    const notDeputy = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE);
+    const notDeputy = parent.children.filter((child) => child.type !== BLOCK_TYPES.deputy
+                                                                 && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE);
 
-    let deputyBottomY = getVerticalShiftFromChildren(deputy, blockParamsMap);
+    if (!deputy.length && !notDeputy.length) {
+      return childrenBlocksArea;
+    }
 
-    const firstNotDeputy = notDeputy[0] ? blockParamsMap.get(notDeputy[0].id) : undefined;
-    let notDeputyBottomY = getVerticalShiftFromChildren(notDeputy, blockParamsMap);
-    let notDeputyRightX = getHorizontalShiftFromChildren(notDeputy, blockParamsMap);
-    let notDeputyLeftX = getLowestLeftFromChildren(notDeputy, blockParamsMap);
+    let firstNotDeputy;
+    let deputyBottomY = 0;
+    let notDeputyBottomY = 0;
+    let notDeputyRightX = 0;
+    let notDeputyLeftX = 0;
+
+    if (deputy.length > 0 || notDeputy.length > 0) {
+      firstNotDeputy = notDeputy[0] && blockParamsMap.get(notDeputy[0].id);
+      deputyBottomY = getVerticalShiftFromChildren(deputy, blockParamsMap);
+      notDeputyBottomY = getVerticalShiftFromChildren(notDeputy, blockParamsMap);
+      notDeputyRightX = getHorizontalShiftFromChildren(notDeputy, blockParamsMap);
+      notDeputyLeftX = getLowestLeftFromChildren(notDeputy, blockParamsMap);
+    }
 
     childrenBlocksArea.id = parent.id;
-    childrenBlocksArea.x = !notDeputyLeftX ? parentBlockParams.x : notDeputyLeftX;
-    childrenBlocksArea.y = (!firstNotDeputy || !firstNotDeputy.y) ? deputyBottomY : firstNotDeputy.y;
+    childrenBlocksArea.x = !notDeputyLeftX ? parentBlockParams.x: notDeputyLeftX;
+    if (firstNotDeputy && firstNotDeputy.y) {
+      childrenBlocksArea.y = firstNotDeputy.y;
+    } else {
+      childrenBlocksArea.y = deputyBottomY || parentBlockParamY;
+    }
     childrenBlocksArea.width = !notDeputyRightX ? 0 : notDeputyRightX - childrenBlocksArea.x;
     !deputyBottomY
       ? childrenBlocksArea.height = !notDeputyBottomY ? 0 : notDeputyBottomY - parentBlockParams.bottom.y

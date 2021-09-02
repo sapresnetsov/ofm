@@ -120,7 +120,9 @@ export const drawScheme = () => {
   }
 
   // сдвиг штампа в правый угол
-  fullWidth = shiftStampRight(stampBlock, parent, parentBlockParams, fullWidth, blockParamsMap);
+  if (ofmStampStr) {
+    fullWidth = shiftStampRight(stampBlock, parent, parentBlockParams, fullWidth, blockParamsMap);
+  }
   // отрисовка соединительных линий
   drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
 
@@ -224,7 +226,9 @@ const drawGovernanceBlocks = ( blocksMap,
 
     // Отрисовка заместителей без потомков
     const deputyVerticalShift = drawDeputy(blocksMap, blockParamsMap, parent, parentBlockParams);
-    if (childrenCount > 1 || parent.type ===BLOCK_TYPES.leadership && childrenCount > 0) {
+    if (childrenCount > 1
+        || parent.type === BLOCK_TYPES.leadership && childrenCount > 0
+        || parent.type === BLOCK_TYPES.legate && childrenCount === 0) {
       y += deputyVerticalShift;
     }
   }
@@ -376,15 +380,10 @@ const drawDeputy = (blocksMap, blockParamsMap, parent, parentParams) => {
   positions.forEach((child) => {
     appendBlock(x, y, width, height, child, blocksMap, blockParamsMap, parentParams);
 
-    y = blockParamsMap.get(child.id).bottom.y + IND_HEIGHT + V_SPACE_BETWEEN_BLOCKS;
+    y = blockParamsMap.get(child.id).bottom.y + V_SPACE_BETWEEN_BLOCKS;
   });
 
-  const lastChildParams = blockParamsMap.get(positions[positionsLength - 1].id);
-  // у блоков с заместителями заместителей нет индикаторов, поэтому берется разница между
-  // нижними точками блоков
-  const verticalDiff = lastChildParams.bottom.y - parentParams.bottom.y;
-
-  return verticalDiff > 0 ? verticalDiff : 0;
+  return Math.max(y - parentParams.bottom.y, 0);
 };
 
 /**
