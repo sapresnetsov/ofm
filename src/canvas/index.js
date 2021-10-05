@@ -21,6 +21,7 @@ export const translateHTMLToCanvas = ( root,
                                        blocksMap,
                                        blockParamsMap,
                                        linesMap,
+                                       curationLinesMap,
                                        stampBlock,
                                        assignedStaffAreaTop,
                                        structuralUnitsAreaTop) => {
@@ -43,16 +44,11 @@ export const translateHTMLToCanvas = ( root,
     if (stampBlock) {
         canvasDrawStamp(ctx, stampBlock.style, stampBlock.childNodes[0], stampBlock.childNodes);
     }
-
-    if (linesMap) {
-        linesMap.forEach((line) => {
-            line.parts.forEach((part, i) => {
-                if (i !== line.parts.length - 1) {
-                    canvasDrawLine(ctx, part, line.parts[i+1], line.lineStyle, line.lineColor);
-                }
-            });
-        });
-    }
+    // отрисовка соединительных линий
+    canvasDrawLines(ctx, linesMap);
+    // отрисовка линий курирования
+    canvasDrawLines(ctx, curationLinesMap);
+    // отрисовка разделительной линии приписного штата
     if (assignedStaffAreaTop) {
         canvasDrawLine(ctx, getPoint(0, assignedStaffAreaTop), getPoint(width, assignedStaffAreaTop), 'dashed', 'black');
         ctx.beginPath();
@@ -60,6 +56,7 @@ export const translateHTMLToCanvas = ( root,
         ctx.textAlign = 'left';
         ctx.fillText('Приписной штат', 50, assignedStaffAreaTop + 10);
     }
+    // отрисовка разделительной линии внешних структурных подразделений
     if (structuralUnitsAreaTop) {
         canvasDrawLine(ctx, getPoint(0, structuralUnitsAreaTop), getPoint(width, structuralUnitsAreaTop), 'dashed', 'black');
         ctx.beginPath();
@@ -228,12 +225,29 @@ const rectDrawText = (ctx, left, top, width, paddingLeft, paddingRight, lineSpac
 };
 
 /**
+ * Отрисовка линий
+ * @param {Object} ctx
+ * @param {Map} linesMap
+ */
+const canvasDrawLines = (ctx, linesMap) => {
+    if (linesMap) {
+        linesMap.forEach((line, key) => {
+            line.parts.forEach((part, i) => {
+                if (i !== line.parts.length - 1) {
+                    canvasDrawLine(ctx, part, line.parts[i+1], line.lineStyle, line.lineColor);
+                }
+            });
+        });
+    }
+}
+
+/**
  * Отрисовка линии
- * @param ctx
- * @param pointFrom
- * @param pointTo
- * @param lineStyle
- * @param lineColor
+ * @param {Object} ctx
+ * @param {Point} pointFrom
+ * @param {Point} pointTo
+ * @param {string} lineStyle
+ * @param {string} lineColor
  */
 const canvasDrawLine = (ctx, pointFrom, pointTo, lineStyle, lineColor) => {
     ctx.beginPath();

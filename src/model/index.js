@@ -61,3 +61,41 @@
  * @property {OFMData.additionalInfo} additionalInfo
  * @property {OFMData.indicators} indicators
  */
+
+/**
+ * @typedef {Object} ImplicatedBlock
+ *
+ * @property {string} blockId
+ * @property {'top', 'left', 'right'} side
+ **/
+
+/**
+ * @typedef {Object} NeighbourPath
+ * @property {string} blockId
+ * @property {number} pathId
+ */
+
+/**
+ * @typedef {Object} Path
+ *
+ * @property {string} blockId
+ * @property {number} pathId
+ * @property {'H'|'V'} type
+ * @property {ImplicatedBlock[]} implicatedBlocks
+ * @property {NeighbourPath[]} neighbourPaths
+ * @property {Point} start
+ * @property {Point} end
+ * @property {string} root
+ * @property {boolean} noSelfHorizontal
+ * @property {number} width
+ * @property {Array} lines
+ */
+
+/**
+ * @typedef {Object} BlockPaths
+ *
+ * @property {string} id // идентификатор родительского блока
+ * @property {path} paths
+ *
+**/
+

@@ -14,16 +14,15 @@ import {
   IND_HEIGHT,
   STAMP_WIDTH,
   OTYPES,
-  ADDITIONAL_INFO,
+  ADDITIONAL_INFO, LINE_TYPE,
 } from './model/constants';
 import {
   appendBlock,
   createLine,
   createUpsideDownConnector,
   getBlockParams,
-  getChildrenBlocksAreas,
-  getDataFromDOM,
-  getHorizontalShiftFromChildren,
+  getDataFromDOM, getGovernanceAreas,
+  getHorizontalShiftFromChildren, getPoint, getPointOfSide,
   getVerticalShiftFromChildren
 } from './utils';
 import {
@@ -33,6 +32,7 @@ import {
 import FileSaver from 'file-saver';
 import 'canvas-toBlob';
 import { translateHTMLToCanvas } from "./canvas";
+import { find } from "lodash";
 
 // Инициализация отрисовки схемы
 const maxInlineCount = 4;
@@ -40,9 +40,11 @@ export const drawScheme = () => {
   const blocksMap = new Map();
   const blockParamsMap = new Map();
   const linesMap = new Map();
-  const governanceAreaMap = new Map();
-  const assignedStaffAreaMap = new Map();
-  const structuralUnitsAreaMap = new Map();
+  const curationLinesMap = new Map();
+  const governanceAreasMap = new Map();
+  const assignedStaffAreasMap = new Map();
+  const structuralUnitsAreasMap = new Map();
+  const connectorsPathsMap = new Map();
 
   const {ofmDataStr, ofmTitle, ofmStampStr, maxDepth, drawSeparators, saveToDom, toImage, toPdf, submitToImage, assignedStaffLabel, structuralUnitsLabel} = getDataFromDOM();
 
@@ -80,9 +82,9 @@ export const drawScheme = () => {
   drawGovernanceBlocks(blocksMap, blockParamsMap, parent, parentBlockParams);
 
   // зоны отрисованных блоков прямого подчинения
-  const childrenBlocksAreas = getChildrenBlocksAreas(parent, blockParamsMap);
-  childrenBlocksAreas.forEach((blockArea) => {
-    governanceAreaMap.set(blockArea.id, blockArea);
+  const childrenAreasArray = getGovernanceAreas(parent, blockParamsMap);
+  childrenAreasArray.forEach((blockArea) => {
+    governanceAreasMap.set(blockArea.id, blockArea);
   });
 
   // отрисовка приписного штата
@@ -91,7 +93,7 @@ export const drawScheme = () => {
                                                         blockParamsMap,
                                                         parent,
                                                         parentBlockParams,
-                                                        governanceAreaMap,
+                                                        governanceAreasMap,
                                                         verticalShift,
                                                         ADDITIONAL_INFO.ASSIGNED_STAFF );
   let assignedStaffAreaTop = verticalShift !== assignedStaffAreaBottom ? verticalShift : 0;
@@ -102,7 +104,7 @@ export const drawScheme = () => {
                                                           blockParamsMap,
                                                           parent,
                                                           parentBlockParams,
-                                                          governanceAreaMap,
+                                                          governanceAreasMap,
                                                           verticalShift,
                                                           ADDITIONAL_INFO.STRUCTURAL_UNIT);
   let structuralUnitsAreaTop = verticalShift !== structuralUnitsAreaBottom ? verticalShift : 0;
@@ -123,8 +125,22 @@ export const drawScheme = () => {
   if (ofmStampStr) {
     fullWidth = shiftStampRight(stampBlock, parent, parentBlockParams, fullWidth, blockParamsMap);
   }
+
+  // получения дорожек для отрисовки линий
+  const connectorsPathArray = getConnectorsPaths(parent, blockParamsMap, governanceAreasMap);
+  connectorsPathArray.forEach((connectorsPath) => {
+    const connectorsPrevPaths = connectorsPathsMap.get(connectorsPath.blockId);
+    if (!connectorsPrevPaths) {
+      connectorsPathsMap.set(connectorsPath.blockId, [connectorsPath]);
+    } else {
+      connectorsPathsMap.set(connectorsPath.blockId, [...connectorsPrevPaths, connectorsPath]);
+    }
+  });
+
   // отрисовка соединительных линий
-  drawConnectors(linesMap, blockParamsMap, governanceAreaMap, assignedStaffAreaMap, parent);
+  drawConnectors(linesMap, blockParamsMap, governanceAreasMap, assignedStaffAreasMap, parent);
+  console.log(connectorsPathsMap);
+  drawCurationConnectors(parent, parent, blockParamsMap, connectorsPathsMap, curationLinesMap);
 
   // отрисовка разеделителей областей с приписным штатом/ структурными подразделениями
   let assignedStaffAreaTopSeparator = 0;
@@ -132,8 +148,8 @@ export const drawScheme = () => {
   if (drawSeparators) {
     assignedStaffAreaTopSeparator = assignedStaffAreaTop - 40;
     structuralUnitsAreaTopSeparator = structuralUnitsAreaTop - 40;
-    drawAreaSeparator(assignedStaffAreaMap, fullWidth, assignedStaffAreaTopSeparator, assignedStaffLabel);
-    drawAreaSeparator(structuralUnitsAreaMap, fullWidth, structuralUnitsAreaTopSeparator, structuralUnitsLabel);
+    drawAreaSeparator(assignedStaffAreasMap, fullWidth, assignedStaffAreaTopSeparator, assignedStaffLabel);
+    drawAreaSeparator(structuralUnitsAreasMap, fullWidth, structuralUnitsAreaTopSeparator, structuralUnitsLabel);
   }
 
   // сохранение разметки
@@ -141,8 +157,9 @@ export const drawScheme = () => {
     saveBlockParamsMapToDOM();
   }
 
-  // формирование канвы для получения изображения
+  // формирование изображения схемы
   if (toImage) {
+    // формирование канвы для получения изображения
     const canvas = translateHTMLToCanvas( document.body,
                                           ofmTitle,
                                           fullWidth,
@@ -150,6 +167,7 @@ export const drawScheme = () => {
                                           blocksMap,
                                           blockParamsMap,
                                           linesMap,
+                                          curationLinesMap,
                                           stampBlock,
                                           assignedStaffAreaTopSeparator,
                                           structuralUnitsAreaTopSeparator );
@@ -173,15 +191,6 @@ export const drawScheme = () => {
         }
       }));
     }
-
-  }
-
-  if (toPdf) {
-
-  }
-
-  if (submitToImage) {
-
   }
 };
 
@@ -382,7 +391,7 @@ const drawDeputy = (blocksMap, blockParamsMap, parent, parentParams) => {
 
     y = blockParamsMap.get(child.id).bottom.y + V_SPACE_BETWEEN_BLOCKS;
   });
-
+  y -= V_SPACE_BETWEEN_BLOCKS;
   return Math.max(y - parentParams.bottom.y, 0);
 };
 
@@ -495,11 +504,11 @@ const drawOtherUnitsBlocks = ( blocksMap,
  * Отрисовка соединительных линий
  * @param {Map} linesMap
  * @param {Map} blockParamsMap
- * @param {Map} orgUnitsAreaMap
- * @param {Map} assignedStaffAreaMap
+ * @param {Map} governanceAreasMap
+ * @param {Map} assignedStaffAreasMap
  * @param {Object} parent
  */
-const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, parent) => {
+const drawConnectors = (linesMap, blockParamsMap, governanceAreasMap, assignedStaffAreasMap, parent) => {
   const parentBlockParams = blockParamsMap.get(parent.id);
   let fromSide;
   let toSide;
@@ -514,8 +523,8 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   if (parent.level === BLOCK_LEVELS.dependent) {
     parentBlockParams.left.y += 10;
   }
-  const orgUnitArea = orgUnitsAreaMap.get(parent.id);
-  const assignedStaffArea = assignedStaffAreaMap.get(parent.id);
+  const orgUnitArea = governanceAreasMap.get(parent.id);
+  const assignedStaffArea = assignedStaffAreasMap.get(parent.id);
   if (!parent.children && (!parent.curation || parent.curation.length === 0)) {
     return;
   }
@@ -527,7 +536,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
       tempOrgUnit = {...orgUnitArea};
     }
     createUpsideDownConnector(root, blockParamsMap, linesMap, tempOrgUnit, parentBlockParams, orgUnitBlockParams, fromSide, toSide);
-    drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, orgUnit);
+    drawConnectors(linesMap, blockParamsMap, governanceAreasMap, assignedStaffAreasMap, orgUnit);
   });
 
   // отрисовка линий к заместителям
@@ -552,7 +561,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
     }
 
     createUpsideDownConnector(root, blockParamsMap, linesMap, parentArea, parentBlockParams, childBlockParams, fromSide, toSide);
-    drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, child);
+    drawConnectors(linesMap, blockParamsMap, governanceAreasMap, assignedStaffAreasMap, child);
   });
 
   // отрисовка линий к приписному штату
@@ -564,7 +573,7 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   assignedStaff.forEach((assignedStaff) => {
     const assignedStaffBlockParams = blockParamsMap.get(assignedStaff.id);
     createUpsideDownConnector(root, blockParamsMap, linesMap, tempOrgUnit, parentBlockParams, assignedStaffBlockParams, fromSide, toSide);
-    drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, assignedStaff);
+    drawConnectors(linesMap, blockParamsMap, governanceAreasMap, assignedStaffAreasMap, assignedStaff);
   });
 
   // отрисовка линий к структурным подразделениям
@@ -579,22 +588,633 @@ const drawConnectors = (linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaff
   structuralUnits.forEach((structuralUnit) => {
     const structuralUnitParams = blockParamsMap.get(structuralUnit.id);
     createUpsideDownConnector(root, blockParamsMap, linesMap, tempOrgUnit, parentBlockParams, structuralUnitParams, fromSide, toSide);
-    drawConnectors(linesMap, blockParamsMap, orgUnitsAreaMap, assignedStaffAreaMap, structuralUnits);
+    drawConnectors(linesMap, blockParamsMap, governanceAreasMap, assignedStaffAreasMap, structuralUnits);
+  });
+};
+
+/**
+ *
+ * @param parent
+ * @param blockParamsMap
+ * @param governanceAreasMap
+ * @param outerHorizontalPath
+ * @return {[]}
+ */
+const getConnectorsPaths = (parent, blockParamsMap, governanceAreasMap, outerHorizontalPath) => {
+  const MIN_VERTICAL_SHIFT = 2;
+  const INITIAL_SHIFT = 5;
+
+  const connectorsPaths = [];
+  const parentBlockParams = blockParamsMap.get(parent.id);
+  let parentPathCounter = 0;
+
+  const governance = parent.children.filter((child) => child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE && child.type !== BLOCK_TYPES.deputy);
+  const deputy = parent.children.filter((child) => child.type === BLOCK_TYPES.deputy);
+
+  const parentArea = governanceAreasMap.get(parent.id);
+  let xPoint = parentBlockParams.left.x - INITIAL_SHIFT;
+  const parentVerticalPath = getVerticalPath( parent.id,
+                                              ++parentPathCounter,
+                                              getPoint(xPoint, parentBlockParams.top.y),
+                                              getPoint(xPoint, parentArea.y));
+  connectorsPaths.push(parentVerticalPath);
+  if (outerHorizontalPath) {
+    outerHorizontalPath.neighbourPaths.push(getNeighbourPath(parentVerticalPath));
+    parentVerticalPath.neighbourPaths.push(getNeighbourPath(outerHorizontalPath));
+  }
+  // горизонтальный путь от левой точки до правой точки его дочерней области
+  let yPoint = parentArea.y - INITIAL_SHIFT;
+  let parentHorizontalEndPoint = parentArea.x + parentArea.width;
+  if (deputy && deputy.length > 0) {
+    const deputyBlockParams = blockParamsMap.get(deputy[0].id);
+    parentHorizontalEndPoint = Math.max(parentHorizontalEndPoint, deputyBlockParams.right.x + H_SPACE_BETWEEN_BLOCKS);
+  }
+  const parentHorizontalPath = getHorizontalPath( parent.id,
+                                                  ++parentPathCounter,
+                                                  getPoint(parentArea.x, yPoint),
+                                                  getPoint(parentHorizontalEndPoint, yPoint),
+                                                  true);
+  connectorsPaths.push(parentHorizontalPath);
+  // вертикальный путь от верхней левой точки до нижней левой точки его дочерней области
+  xPoint = parentArea.x - INITIAL_SHIFT;
+  const parentLeftVerticalPath = getVerticalPath( parent.id,
+                                                  ++parentPathCounter,
+                                                  getPoint(xPoint, parentArea.y),
+                                                  getPoint(xPoint, parentArea.y + parentArea.height) )
+  if (governance.length > maxInlineCount) {
+    connectorsPaths.push(parentLeftVerticalPath);
+  }
+  // если блок leadership или legate
+  // для всех заместителей добавляем вертикальные пути
+  if (deputy && deputy.length > 0) {
+    let deputyXShift = INITIAL_SHIFT;
+    deputy.reverse().forEach((deputyBlock) => {
+      const deputyBlockParams = blockParamsMap.get(deputyBlock.id);
+      const deputyX = deputyBlockParams.right.x + deputyXShift;
+      deputyXShift += MIN_VERTICAL_SHIFT;
+      const deputyPath = getVerticalPath( deputyBlock.id,
+                                          1,
+                                          getPoint(deputyX, deputyBlockParams.right.y),
+                                          getPoint(deputyX, parentHorizontalPath.end.y));
+      connectorsPaths.push(deputyPath);
+      deputyPath.neighbourPaths.push(getNeighbourPath(parentHorizontalPath));
+      parentHorizontalPath.neighbourPaths.push(getNeighbourPath(deputyPath));
+    })
+  }
+
+  // настройка соседних путей
+  parentVerticalPath.neighbourPaths.push(getNeighbourPath(parentHorizontalPath));
+  parentHorizontalPath.neighbourPaths.push(getNeighbourPath(parentVerticalPath));
+  if (governance.length > maxInlineCount) {
+    parentLeftVerticalPath.neighbourPaths.push(getNeighbourPath(parentHorizontalPath));
+    parentHorizontalPath.neighbourPaths.push(getNeighbourPath(parentLeftVerticalPath));
+  }
+
+  // для дочерних блоков
+  let newRow = false;
+  // проверка на единственного потомка не заместителя
+  let singleChild = false;
+  if (governance.length === 1 && governance.every(child => child.type === BLOCK_TYPES.default)) {
+    singleChild = true;
+  }
+  let parentAdditionalHorizontalPath;
+  governance.forEach((child, key) => {
+    const childBlockParams = blockParamsMap.get(child.id);
+
+    // дополнительные горизонтальные пути
+    newRow = (key + 1) % maxInlineCount;
+    if (parent.type === BLOCK_TYPES.legate && key >= maxInlineCount && newRow) {
+      yPoint = childBlockParams.top.y - INITIAL_SHIFT;
+      parentAdditionalHorizontalPath = getHorizontalPath( parent.id,
+                                                          ++parentPathCounter,
+                                                          getPoint(parentArea.x, yPoint),
+                                                          getPoint(parentArea.x + parentArea.width, yPoint) );
+      connectorsPaths.push(parentAdditionalHorizontalPath);
+      parentLeftVerticalPath.neighbourPaths.push(getNeighbourPath(parentAdditionalHorizontalPath));
+      parentAdditionalHorizontalPath.neighbourPaths.push(getNeighbourPath(parentLeftVerticalPath));
+    }
+
+    if (child.type === BLOCK_TYPES.legate) {
+      const childConnectorsPaths = getConnectorsPaths( child,
+                                                       blockParamsMap,
+                                                       governanceAreasMap,
+                                                       parentAdditionalHorizontalPath || parentHorizontalPath );
+      connectorsPaths.push(...childConnectorsPaths);
+
+    } else if (child.type === BLOCK_TYPES.default) {
+      const startY = parentAdditionalHorizontalPath ? parentAdditionalHorizontalPath.start.y : parentHorizontalPath.start.y;
+      xPoint = childBlockParams.left.x - INITIAL_SHIFT;
+      const parentChildVerticalPath = getVerticalPath( parent.id,
+                                                       ++parentPathCounter,
+                                                       getPoint(xPoint, startY),
+                                                       getPoint(xPoint, childBlockParams.bottom.y) );
+      if (!singleChild) {
+        connectorsPaths.push(parentChildVerticalPath);
+      }
+
+      const noSelfHorizontal = parent.type === BLOCK_TYPES.legate;
+      const childConnectorsPaths = getDefaultBlockConnectorsPaths( child,
+                                                                   childBlockParams,
+                                                                   parentChildVerticalPath,
+                                                                   blockParamsMap,
+                                                                   noSelfHorizontal );
+
+      if (parentAdditionalHorizontalPath) {
+        parentChildVerticalPath.neighbourPaths.push(getNeighbourPath(parentAdditionalHorizontalPath));
+        parentAdditionalHorizontalPath.neighbourPaths.push(getNeighbourPath(parentChildVerticalPath));
+      }
+
+      childConnectorsPaths.forEach((childPath) => {
+        parentChildVerticalPath.neighbourPaths.push(getNeighbourPath(childPath));
+        parentChildVerticalPath.end.y = Math.max(parentChildVerticalPath.end.y, childPath.end.y);
+        if (singleChild) {
+          parentVerticalPath.end.y = parentChildVerticalPath.end.y;
+        }
+        if (childPath.noSelfHorizontal) {
+          if (parentAdditionalHorizontalPath) {
+            childPath.neighbourPaths.push(getNeighbourPath(parentAdditionalHorizontalPath));
+          } else {
+            childPath.neighbourPaths.push(getNeighbourPath(parentHorizontalPath));
+          }
+        } else {
+          if (singleChild) {
+            childPath.neighbourPaths.push(getNeighbourPath(parentVerticalPath));
+          } else {
+            childPath.neighbourPaths.push(getNeighbourPath(parentChildVerticalPath));
+          }
+        }
+
+        connectorsPaths.push(childPath);
+      })
+    }
   });
 
-  // отрисовка линий курирования
-  if (parent.curation && parent.curation.length > 0) {
-    parent.curation.forEach((curatedId) => {
-      const curatedBlockParams = blockParamsMap.get(curatedId);
-      if (curatedBlockParams) {
-        let curatedUnitArea;
-        if (orgUnitArea && curatedBlockParams.y !== orgUnitArea.y) {
-          curatedUnitArea= {...orgUnitArea};
-        }
-        // createCurationConnector(root, blockParamsMap, linesMap, curatedUnitArea, parentBlockParams, curatedBlockParams, BOTTOM, TOP, true);
-      }
-    });
+  return connectorsPaths;
+}
+
+/**
+ *
+ * @param parent
+ * @param parentBlockParams
+ * @param parentChildVerticalPath
+ * @param blockParamsMap
+ * @param {boolean} noSelfHorizontal
+ * @return {*}
+ */
+const getDefaultBlockConnectorsPaths = (parent, parentBlockParams, parentChildVerticalPath, blockParamsMap, noSelfHorizontal) => {
+  let parentHorizontalPathStart;
+  let parentHorizontalPathEnd;
+  if (noSelfHorizontal) {
+    parentHorizontalPathStart = getPoint(0, 0);
+    parentHorizontalPathEnd = getPoint(0, 0);
+  } else {
+    parentHorizontalPathStart = getPoint(parentChildVerticalPath.start.x, parentBlockParams.top.y - 5);
+    parentHorizontalPathEnd = getPoint(parentBlockParams.right.x, parentBlockParams.top.y - 5);
   }
+
+  const parentHorizontalPath = getHorizontalPath( parent.id,
+                                                  1,
+                                                  parentHorizontalPathStart,
+                                                  parentHorizontalPathEnd,
+                                                  false,
+                                                  V_SPACE_BETWEEN_BLOCKS,
+                                                  noSelfHorizontal );
+  const childHorizontalPaths = [];
+  parent.children.forEach((child) => {
+    const childBlockParams = blockParamsMap.get(child.id);
+    const childConnectorsPaths = getDefaultBlockConnectorsPaths(child, childBlockParams, parentChildVerticalPath, blockParamsMap);
+    childHorizontalPaths.push(...childConnectorsPaths);
+  });
+  return [parentHorizontalPath, ...childHorizontalPaths];
+}
+
+/**
+ * @param {string} blockId
+ * @param {number} pathId
+ * @param {'H'|'V'} type
+ * @param {Point} start
+ * @param {Point} end
+ * @param {boolean} isRoot
+ * @param {number} width
+ * @param {boolean} noSelfHorizontal
+ * @return {Path}
+ */
+const getPath = ( blockId,
+                  pathId,
+                  type,
+                  start,
+                  end,
+                  isRoot,
+                  width,
+                  noSelfHorizontal=false) => {
+  const path = {
+    blockId,
+    pathId,
+    type,
+    implicatedBlocks: [],
+    neighbourPaths: [],
+    start,
+    end,
+    isRoot,
+    width,
+    noSelfHorizontal,
+    lines: []
+  };
+  Object.defineProperties(path, {
+    blockId: {
+      writable: false,
+      configurable: false
+    },
+    pathId: {
+      writable: false,
+      configurable: false
+    },
+    type: {
+      writable: false,
+      configurable: false
+    },
+    implicatedBlocks: {
+      writable: false,
+      configurable: false
+    },
+    neighbourPaths: {
+      writable: false,
+      configurable: false
+    },
+    start: {
+      writable: false,
+      configurable: false
+    },
+    end: {
+      writable: false,
+      configurable: false
+    },
+    isRoot: {
+      writable: false,
+      configurable: false
+    },
+    width: {
+      writable: false,
+      configurable: false
+    },
+    noSelfHorizontal: {
+      writable: false,
+      configurable: false
+    },
+    lines: {
+      writable: false,
+      configurable: false,
+      value: getPathLines(path)
+    }
+  });
+  return path;
+}
+
+/**
+ *
+ * @param path
+ * @return {[]}
+ */
+const getPathLines = (path) => {
+  const SPACE_BETWEEN_LINES = 4;
+  const lines = [];
+  if (!path.width) {
+    return lines;
+  }
+  let startWidth;
+  let endWidth;
+  if (path.type === LINE_TYPE.vertical) {
+    startWidth = path.start.x;
+    endWidth = startWidth - path.width;
+    while (startWidth > endWidth) {
+      lines.push(
+          {
+            blockId: undefined,
+            n: startWidth,
+          }
+      );
+      startWidth -= SPACE_BETWEEN_LINES;
+    }
+  } else {
+    startWidth = path.start.y;
+    endWidth = startWidth - path.width;
+    while (startWidth > endWidth) {
+      lines.push(
+          {
+            blockId: undefined,
+            n: startWidth,
+          }
+      );
+      startWidth -= SPACE_BETWEEN_LINES;
+    }
+  }
+
+  return lines;
+}
+
+/**
+ *
+ * @param {string} blockId
+ * @param {number} pathId
+ * @param {Point} start
+ * @param {Point} end
+ * @param {boolean} isRoot
+ * @param {number} width
+ * @param {boolean} noSelfHorizontal
+ * @return {Path}
+ */
+const getHorizontalPath = (blockId, pathId, start, end, isRoot=false, width= V_SPACE_BETWEEN_BLOCKS, noSelfHorizontal=false) => {
+  return getPath(blockId, pathId, LINE_TYPE.horizontal, start, end, isRoot, width, noSelfHorizontal);
+}
+
+/**
+ *
+ * @param {string} blockId
+ * @param {number} pathId
+ * @param {Point} start
+ * @param {Point} end
+ * @param {boolean} isRoot
+ * @param {number} width
+ * @return {Path}
+ */
+const getVerticalPath = (blockId, pathId, start, end, isRoot=false, width= H_SPACE_BETWEEN_BLOCKS) => {
+  return getPath(blockId, pathId, LINE_TYPE.vertical, start, end, isRoot, width);
+}
+
+/**
+ *
+ * @param path
+ * @return {{blockId: (string|*), pathId: (number|*)}}
+ */
+const getNeighbourPath = (path) => {
+  return {
+    blockId: path.blockId,
+    pathId: path.pathId
+  }
+}
+
+/**
+ *
+ * @param {Object} rootBlock
+ * @param {Object} currentBlock
+ * @param {Map} blockParamsMap
+ * @param {Map} connectorsPathsMap
+ * @param {Map} linesMap
+ */
+const drawCurationConnectors = (rootBlock, currentBlock, blockParamsMap, connectorsPathsMap, linesMap) => {
+  let toSide = TOP;
+  const lineStyle = 'dashed';
+  const lineColor = 'blue';
+
+  const currentBlockParams = blockParamsMap.get(currentBlock.id);
+
+  // connectorsPathsMap.forEach((connectorsPaths) => {
+  //   connectorsPaths.forEach((connectorsPath) => {
+  //     createLine(root, connectorsPath.start, connectorsPath.end, connectorsPath.type, lineStyle, 'red');
+  //   })
+  // })
+
+  if (currentBlock.curation && currentBlock.curation.length > 0) {
+    const currentBlockHierarchy = findBlockHierarchy(rootBlock, currentBlock.id).reverse();
+    console.log(`curator ${currentBlock.id}`);
+
+    currentBlock.curation.forEach(curatedBlock => {
+
+      console.log(`curated ${curatedBlock}`);
+      // if (currentBlock.id === '44101707/44338250') {
+      //   console.log('here');
+      // }
+      // if (curatedBlock === '44018599/44021026') {
+      //   console.log('here2');
+      // }
+      if (curatedBlock === '44338064/44011701') {
+        console.log('here3');
+      }
+      // if (curatedBlock === '44211833/44011720') {
+      //   console.log('here4');
+      // }
+      const curatedBlockParams = blockParamsMap.get(curatedBlock);
+      const curatedBlockHierarchy = findBlockHierarchy(rootBlock, curatedBlock).reverse();
+      // находим пересечение иерархий
+      const hierarchiesCrossing = findHierarchiesCrossing(currentBlockHierarchy, curatedBlockHierarchy);
+
+      // объединение иерархий
+      const mergedHierarchies = [];
+      mergedHierarchies.push(...curatedBlockHierarchy.slice(0, curatedBlockHierarchy.indexOf(hierarchiesCrossing) + 1));
+      mergedHierarchies.push(...currentBlockHierarchy.slice(0, currentBlockHierarchy.indexOf(hierarchiesCrossing)));
+
+      // подготовка линий от курируемого блока
+      let linePoints = [];
+      const initialCurationPoint = getPointOfSide(curatedBlockParams, toSide);
+      initialCurationPoint.x -= 5;
+      linePoints.push(initialCurationPoint);
+      const curatedBlockInitialPath = connectorsPathsMap.get(curatedBlockHierarchy[0])[0];
+      // получаем, линию в пути, которую можно занять
+      if (!curatedBlockInitialPath.noSelfHorizontal) {
+        const line = getFreeLine(curatedBlockInitialPath, currentBlock.id);
+        linePoints.push(getPoint(initialCurationPoint.x, line.n));
+      }
+
+      let previousPath = curatedBlockInitialPath;
+      let previousPoint = linePoints[linePoints.length - 1];
+      for (let i = 1; i < mergedHierarchies.length; i++) {
+        const [newLinesPoint, newPreviousPath] = findPointsToNextHierarchy( connectorsPathsMap,
+                                                                            mergedHierarchies[i],
+                                                                            mergedHierarchies[i + 1],
+                                                                            currentBlock.id,
+                                                                            previousPath.neighbourPaths[0].pathId,
+                                                                            previousPoint);
+        if (!newLinesPoint) {
+          continue;
+        }
+        linePoints.push(...newLinesPoint);
+        previousPath = newPreviousPath;
+        previousPoint = linePoints[linePoints.length - 1];
+      }
+      // подготовка линии до блока куратора
+      let initialCurrentPoint = getPointOfSide(currentBlockParams, currentBlockParams.type === BLOCK_TYPES.deputy ? RIGHT : LEFT);
+      // если прямой потомок
+      if (mergedHierarchies.length === 2) {
+
+      }
+      linePoints.push(getPoint(previousPoint.x, initialCurrentPoint.y));
+      previousPoint = linePoints[linePoints.length - 1];
+      // обход блока
+      if ((previousPoint.x === initialCurrentPoint.x) && (previousPoint.y < initialCurrentPoint.y)) {
+        console.log(`prevPoint:${previousPoint.x}/${previousPoint.y} initCurrent: ${initialCurrentPoint.x}/${initialCurrentPoint.y}`);
+        // previousPoint.x = currentBlockParams.left.x;
+        // linePoints[linePoints.length - 1] = previousPoint;
+      }
+      linePoints.push(initialCurrentPoint);
+      // отрисовка линий
+      createLinesFromArray(linePoints, LINE_TYPE.vertical, lineStyle, lineColor);
+      // сохранение линий
+      const lineKey = `${currentBlock.id}/${curatedBlock}`;
+      linesMap.set(lineKey, {
+        parts: linePoints.map(linePoint => ({...linePoint})),
+        lineStyle: lineStyle,
+        lineColor: lineColor
+      });
+    })
+  }
+
+  const governance = currentBlock.children.filter(child => child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE
+                                                           && child.otype === OTYPES.POSITION);
+
+  governance.forEach((governanceBlock) => {
+    drawCurationConnectors(rootBlock, governanceBlock, blockParamsMap, connectorsPathsMap, linesMap)
+  })
+}
+
+const getFreeLine = (path, blockId) => {
+  let line = find(path.lines, line => line.blockId === blockId);
+  if (!line) {
+    line = find(path.lines, line => !line.blockId);
+    // если есть свободная линия, то занимаем её
+    if (line) {
+      line.blockId = blockId;
+    } else {
+      // если все линии в пути уже заняты
+    }
+  }
+  return line;
+}
+
+/**
+ *
+ * @param connectorsPathsMap
+ * @param blockId
+ * @param toBlockId
+ * @param destinationBlockId
+ * @param initialPathId
+ * @param previousOuterPoint
+ * @return {[[], *]}
+ */
+const findPointsToNextHierarchy = (connectorsPathsMap, blockId, toBlockId, destinationBlockId, initialPathId, previousOuterPoint) => {
+  const linePoints = [];
+
+  const hierarchyPaths = connectorsPathsMap.get(blockId);
+  let currentPath = hierarchyPaths.filter(path => path.pathId === initialPathId)[0];
+  let paths = [];
+  if (!toBlockId) {
+    paths.push(currentPath);
+  } else {
+    paths = findPathsToBlockIdInNeighbourPaths(connectorsPathsMap, toBlockId, currentPath);
+  }
+  let previousPoint = previousOuterPoint;
+  console.log(paths);
+  if (!paths || paths.length === 0 || paths.some(path => !path)) {
+    // console.log(hierarchyPaths);
+    // console.log(currentPath);
+    return [];
+  }
+  if (!toBlockId && paths.length === 1 && currentPath.isRoot && currentPath.type === LINE_TYPE.horizontal) {
+    const verticalPath = hierarchyPaths[0];
+    paths.push(verticalPath);
+  }
+  paths.filter(path => !path.noSelfHorizontal).forEach(path => {
+    const line = getFreeLine(path, destinationBlockId);
+    if (path.type === LINE_TYPE.vertical) {
+      linePoints.push(getPoint(line.n, previousPoint.y));
+    } else {
+      linePoints.push(getPoint(previousPoint.x, line.n));
+    }
+    previousPoint = linePoints[linePoints.length - 1];
+  })
+  return [linePoints, paths[paths.length - 1]];
+}
+
+/**
+ *
+ * @param connectorsPathsMap
+ * @param toBlockId
+ * @param currentPath
+ * @param previousPath
+ * @return {[undefined, ...[*]|*]|[undefined]}
+ */
+const findPathsToBlockIdInNeighbourPaths = (connectorsPathsMap, toBlockId, currentPath, previousPath) => {
+  for (let i = 0; i < currentPath.neighbourPaths.length; i++) {
+    const neighbourPath = currentPath.neighbourPaths[i];
+    if (previousPath && neighbourPath.blockId === previousPath.blockId && neighbourPath.pathId === previousPath.pathId) {
+      continue;
+    }
+    if (currentPath.neighbourPaths[i].blockId === toBlockId) {
+      return [currentPath];
+    } else {
+      const path = connectorsPathsMap.get(currentPath.neighbourPaths[i].blockId).filter(path => path.pathId === currentPath.neighbourPaths[i].pathId)[0];
+      if (!path) {
+        continue;
+      }
+      // if (path.blockId === toBlockId && path.isRoot ) {
+      //   return [currentPath];
+      // }
+      const nextPaths = findPathsToBlockIdInNeighbourPaths(connectorsPathsMap, toBlockId, path, currentPath);
+      if (nextPaths && nextPaths.length) {
+        return [currentPath, ...nextPaths];
+      }
+    }
+  }
+}
+
+/**
+ *
+ * @param {Point[]} linePoints
+ * @param {string} initialLineType
+ * @param lineStyle
+ * @param lineColor
+ */
+const createLinesFromArray = (linePoints, initialLineType, lineStyle, lineColor) => {
+  let lineType = initialLineType;
+  for (let i = 0; i < linePoints.length - 1; i++) {
+    createLine(root, linePoints[i], linePoints[i + 1], lineType, lineStyle, lineColor);
+    lineType = lineType === LINE_TYPE.vertical ? LINE_TYPE.horizontal : LINE_TYPE.vertical;
+  }
+}
+
+/**
+ *
+ * @param parent
+ * @param {string} currentBlockId
+ * @return {[]}
+ */
+const findBlockHierarchy = (parent, currentBlockId) => {
+  let hierarchy = [];
+  if (parent.id === currentBlockId) {
+    hierarchy.push(currentBlockId);
+  } else {
+    for (let i = 0; i < parent.children.length; i++) {
+      const deepHierarchy = findBlockHierarchy(parent.children[i], currentBlockId)
+      if (deepHierarchy.length > 0) {
+        hierarchy = parent.type === BLOCK_TYPES.default ? deepHierarchy : [parent.id, ...deepHierarchy];
+        break;
+      }
+    }
+  }
+
+  return hierarchy;
+}
+
+/**
+ *
+ * @param {string[]} hierarchyFrom
+ * @param {string[]} hierarchyTo
+ * @return {string}
+ */
+const findHierarchiesCrossing = (hierarchyFrom, hierarchyTo) => {
+  if (!hierarchyFrom ||!hierarchyTo) {
+    return '';
+  }
+
+  let hierarchyCrossing = '';
+
+  for (let id of hierarchyFrom) {
+    if (hierarchyTo.indexOf(id) !== -1) {
+      hierarchyCrossing = id;
+      break;
+    }
+  }
+
+  return hierarchyCrossing;
 };
 
 /**
@@ -611,7 +1231,7 @@ const shiftChildBlocksDown = ( parent,
                                blocksMap,
                                blockParamsMap,
                                deputyBottom,
-                               childInlineCount) => {
+                               childInlineCount ) => {
   const verticalSpaceBetweenBlocks = V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT;
   // TODO возможно лишняя переменная
   let previousBottom = 0;
@@ -647,7 +1267,7 @@ const shiftChildBlocksDown = ( parent,
         }
         childBlock.style.top = `${newTopY}px`;
       } else {
-        if (previousBottom >= deepestVerticalShift - 45) {
+        if (previousBottom >= deepestVerticalShift - verticalSpaceBetweenBlocks) {
           newTopY = previousBottom + verticalSpaceBetweenBlocks;
         } else {
           newTopY = deepestVerticalShift + verticalSpaceBetweenBlocks;
