@@ -336,31 +336,32 @@ const drawGovernanceBlocks = ( blocksMap,
 
   // пересчет высоты блоков и добавление в глобальный map
   let previousBottom = 0;
-  if (parent.level === BLOCK_LEVELS.first) {
-    children.filter((child) => child.otype === OTYPES.POSITION).forEach((child, key) => {
-      const childBlock = blocksMap.get(child.id);
-      const indicatorBlockTop = newHeight + parseInt(childBlock.children[0].style.borderWidth, 10) * 2;
-      childBlock.style.height = maxHeight + 'px';
-      childBlock.children[0].style.height = newHeight + 'px';
-      if (!childrenDrawnInline && key > 0) {
-        childBlock.style.top = `${previousBottom + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT}px`;
-      }
-      childBlock.children[1].style.top = indicatorBlockTop + 'px';
-      blocksMap.set(child.id, childBlock);
-      const newChildBlockParams  = getBlockParams(childBlock, child, parentBlockParams.top.y);
-      blockParamsMap.set(child.id, newChildBlockParams);
-      previousBottom = newChildBlockParams.bottom.y;
-      // сдвиг заместителей без потомков
-      let deputyBottom = shiftDeputyBlocksDown(child, newChildBlockParams, blocksMap, blockParamsMap);
+  //TODO пересчитанную высоту править здесь
+  children.filter((child) => child.otype === OTYPES.POSITION).forEach((child, key) => {
+    const childBlock = blocksMap.get(child.id);
 
-      // сдвиг дочерних блоков
-      if (child.children.filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE).length < 2) {
-        deputyBottom = 0;
-      }
+    const indicatorBlockTop = newHeight + parseInt(childBlock.children[0].style.borderWidth, 10) * 2;
+    childBlock.style.height = maxHeight + 'px';
+    childBlock.children[0].style.height = newHeight + 'px';
+    if (!childrenDrawnInline && key > 0) {
+      childBlock.style.top = `${previousBottom + V_SPACE_BETWEEN_BLOCKS + IND_HEIGHT}px`;
+    }
+    childBlock.children[1].style.top = indicatorBlockTop + 'px';
+    blocksMap.set(child.id, childBlock);
+    const newChildBlockParams  = getBlockParams(childBlock, child, parentBlockParams.top.y);
+    blockParamsMap.set(child.id, newChildBlockParams);
+    previousBottom = newChildBlockParams.bottom.y;
 
-      shiftChildBlocksDown(child, newChildBlockParams, blocksMap, blockParamsMap, deputyBottom, maxInlineCount);
-    });
-  }
+    // сдвиг заместителей без потомков
+    let deputyBottom = shiftDeputyBlocksDown(child, newChildBlockParams, blocksMap, blockParamsMap);
+
+    // сдвиг дочерних блоков
+    if (child.children.filter((child) => child.type !== BLOCK_TYPES.deputy && child.additionalInfo === ADDITIONAL_INFO.GOVERNANCE).length < 2) {
+      deputyBottom = 0;
+    }
+
+    shiftChildBlocksDown(child, newChildBlockParams, blocksMap, blockParamsMap, deputyBottom, maxInlineCount);
+  });
 
   return [retHorizontalShift, y];
 };
