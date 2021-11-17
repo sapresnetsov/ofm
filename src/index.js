@@ -324,7 +324,6 @@ const drawGovernanceBlocks = ( blocksMap,
         const deputyBlockParams = getBlockParams(deputyBlock, deputy, deputyBlock.nearParentTop);
         blockParamsMap.set(deputy.id, deputyBlockParams);
       });
-
     retHorizontalShift = childrenWidth;
   }
 
@@ -336,6 +335,7 @@ const drawGovernanceBlocks = ( blocksMap,
 
   // пересчет высоты блоков и добавление в глобальный map
   let previousBottom = 0;
+  //TODO пересчитанную высоту править здесь
   children.filter((child) => child.otype === OTYPES.POSITION).forEach((child, key) => {
     const childBlock = blocksMap.get(child.id);
 
